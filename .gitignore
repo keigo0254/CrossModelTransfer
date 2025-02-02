@@ -1,5 +1,7 @@
 .cache
 .env
 dataset
+download.sh
 model
+NWPU-RESISC45.rar
 wandb
