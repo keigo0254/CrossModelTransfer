@@ -1,5 +1,5 @@
 sudo apt -y install kaggle 
-mkdir <your base dir>
+mkdir dataset
 cd <your base dir>
 export KAGGLE_USERNAME=<your kaggle username>
 export KAGGLE_KEY=<your kaggle key>
