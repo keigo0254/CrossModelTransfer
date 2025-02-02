@@ -55,6 +55,8 @@ ENV PATH /home/$USER_NAME/.local/bin:$PATH
 ENV HOME /home/$USER_NAME
 WORKDIR /app
 
+RUN if [ ! -d ./model]; then mkdir model; fi
+
 CMD ["/bin/bash"]
 
 RUN conda init bash && \

@@ -21,7 +21,6 @@ python split_dataset.py
 
 ## Environment
 
-あらかじめデータセット，モデルを保存する用のフォルダをどこかに作成しておいてください(想定はdataset, model)．
 Dockerfile内のUSER_NAME, GROUP_NAMEを自由に設定してください．
 
 wandbでのロギングのため，.env_exampleのようにAPIキーを入れて，.envファイルを作成してください．

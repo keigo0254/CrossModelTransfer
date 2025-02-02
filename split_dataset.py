@@ -1,4 +1,4 @@
-base_dir = f'<your base dir>'
+base_dir = "dataset" # f'<your base dir>'
 
 ### PROCESS SUN397 DATASET
 import os
