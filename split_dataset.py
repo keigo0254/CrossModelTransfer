@@ -1,12 +1,13 @@
-base_dir = "~/dataset"
+# Split the dataset into train, val, and test folders
+import os
+import random
+import shutil
+
+
+base_dir = os.path.expanduser("~/dataset")
+
 
 ### PROCESS SUN397 DATASET
-import os
-import shutil
-from pathlib import Path
-downloaded_data_path = f"{base_dir}/sun397"
-output_path = f"{base_dir}/sun397"
-
 def process_dataset(txt_file, downloaded_data_path, output_folder):
     with open(txt_file, 'r') as file:
         lines = file.readlines()
@@ -28,6 +29,10 @@ def process_dataset(txt_file, downloaded_data_path, output_folder):
         if i % 100 == 0:
             print(f"Processed {i}/{len(lines)} images")
 
+
+downloaded_data_path = f"{base_dir}/sun397"
+output_path = f"{base_dir}/sun397"
+
 process_dataset(
     os.path.join(downloaded_data_path, 'Training_01.txt'), 
     os.path.join(downloaded_data_path, 'SUN397'), 
@@ -41,13 +46,6 @@ process_dataset(
 
 
 ### PROCESS EuroSAT_RGB DATASET
-src_dir = f'{base_dir}/euro_sat/2750'    # replace with the path to your dataset
-dst_dir = f'{base_dir}/EuroSAT_splits'  # replace with the path to the output directory
-
-import os
-import shutil
-import random
-
 def create_directory_structure(dst_dir, classes):
     for dataset in ['train', 'val', 'test']:
         path = os.path.join(dst_dir, dataset)
@@ -84,17 +82,16 @@ def split_dataset(dst_dir, src_dir, classes, val_size=270, test_size=270):
             shutil.copy(src_path, dst_path)
             # break
 
+
+src_dir = f'{base_dir}/euro_sat/2750'    # replace with the path to your dataset
+dst_dir = f'{base_dir}/EuroSAT_splits'  # replace with the path to the output directory
+
 classes = [d for d in os.listdir(src_dir) if os.path.isdir(os.path.join(src_dir, d))]
 create_directory_structure(dst_dir, classes)
 split_dataset(dst_dir, src_dir, classes)
 
-### PROCESS DTD DATASET
-import os
-import shutil
-from pathlib import Path
-downloaded_data_path = f"{base_dir}/dtd/images"
-output_path = f"{base_dir}/dtd"
 
+### PROCESS DTD DATASET
 def process_dataset(txt_file, downloaded_data_path, output_folder):
     with open(txt_file, 'r') as file:
         lines = file.readlines()
@@ -113,6 +110,10 @@ def process_dataset(txt_file, downloaded_data_path, output_folder):
         shutil.copy(full_input_path, output_file_path)
         if i % 100 == 0:
             print(f"Processed {i}/{len(lines)} images")
+
+
+downloaded_data_path = f"{base_dir}/dtd/images"
+output_path = f"{base_dir}/dtd"
 
 process_dataset(
     f'{base_dir}/dtd/labels/train.txt', downloaded_data_path, os.path.join(output_path, "train")
