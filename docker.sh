@@ -7,8 +7,8 @@
 # ----------------------------------------------------
 
 PROJECT_NAME="task_arithmetic"
-DATASET_DIR="dataset"
-MODEL_DIR="model"
+DATASET_DIR="~/dataset"
+MODEL_DIR="~/model"
 
 DOCKERFILE_NAME="Dockerfile"
 

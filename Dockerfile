@@ -39,9 +39,9 @@ ENV PYTHONBREAKPOINT=ipdb.set_trace
 ARG USER_UID
 ARG USER_GID
 
-# Replace with your user / group name
-ARG USER_NAME=mentsuyu
-ARG GROUP_NAME=mentsuyu
+ARG USER_NAME=user
+ARG GROUP_NAME=user
+ARG PASSWD=user
 
 RUN if ! getent group $USER_GID >/dev/null; then \
     groupadd -g $USER_GID $GROUP_NAME; \
@@ -54,8 +54,6 @@ ENV PATH /home/$USER_NAME/.local/bin:$PATH
 
 ENV HOME /home/$USER_NAME
 WORKDIR /app
-
-RUN if [ ! -d ./model]; then mkdir model; fi
 
 CMD ["/bin/bash"]
 

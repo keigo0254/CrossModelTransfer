@@ -1,4 +1,4 @@
-base_dir = "dataset"
+base_dir = "~/dataset"
 
 ### PROCESS SUN397 DATASET
 import os
