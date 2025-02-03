@@ -1,7 +1,10 @@
 # Split the dataset into train, val, and test folders
+import glob
 import os
 import random
 import shutil
+import scipy.io
+import tarfile
 
 
 base_dir = os.path.expanduser("~/dataset")
@@ -121,3 +124,46 @@ process_dataset(
 process_dataset(
     f'{base_dir}/dtd/labels/test.txt', downloaded_data_path, os.path.join(output_path, "val")
 )
+
+
+### PROCESS ImageNet DATASET
+# https://zenn.dev/hidetoshi/articles/20210717_pytorch_dataset_for_imagenet
+target_dir = f"{base_dir}/ILSVRC2012_img_train/"
+target_dir = shutil.move(target_dir, f"{base_dir}/imagenet/train")
+for tar_filepath in glob.glob(os.path.join(target_dir, "*.tar")):
+    target_dir = tar_filepath.replace(".tar", "")
+    os.makedirs(target_dir, exist_ok=True)
+    with tarfile.open(tar_filepath, "r") as tar:
+        tar.extractall(target_dir)
+    os.remove(tar_filepath)
+os.remove(f"{base_dir}/ILSVRC2012_img_train.tar")
+
+imagenet_val_tar_path = f"{base_dir}/ILSVRC2012_img_val.tar"
+target_dir = f"{base_dir}/imagenet/val_in_folder/"
+meta_path = f"{base_dir}/ILSVRC2012_devkit_t12/data/meta.mat"
+truth_label_path = f"{base_dir}/ILSVRC2012_devkit_t12/data/ILSVRC2012_validation_ground_truth.txt"
+
+meta = scipy.io.loadmat(meta_path, squeeze_me=True)
+ilsvrc2012_id_to_wnid = {m[0]: m[1] for m in meta["synsets"]}
+
+with open(truth_label_path, "r") as f:
+    ilsvrc_ids = tuple(int(ilsvrc_id) for ilsvrc_id in f.read().split("\n")[:-1])
+
+for ilsvrc_id in ilsvrc_ids:
+    wnid = ilsvrc2012_id_to_wnid[ilsvrc_id]
+    os.makedirs(os.path.join(target_dir, wnid), exist_ok=True)
+
+os.makedirs(target_dir, exist_ok=True)
+
+num_valid_images = 50000
+with tarfile.open(imagenet_val_tar_path, "r") as tar:
+    for valid_id, ilsvrc_id in zip(range(1, num_valid_images+1), ilsvrc_ids):
+        wnid = ilsvrc2012_id_to_wnid[ilsvrc_id]
+        filename = f"ILSVRC2012_val_{str(valid_id).zfill(8)}.JPEG"
+        print(filename, wnid)
+        img = tar.extractfile(filename)
+        with open(os.path.join(target_dir, wnid, filename), "wb") as f:
+            f.write(img.read())
+os.remove(f"{base_dir}/ILSVRC2012_img_val.tar")
+shutil.rmtree(f"{base_dir}/ILSVRC2012_devkit_t12")
+os.remove(f"{base_dir}/ILSVRC2012_devkit_t12.tar.gz")

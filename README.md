@@ -2,6 +2,13 @@
 
 ## Dataset
 1. [リンク](https://onedrive.live.com/?authkey=%21AHHNaHIlzp%5FIXjs&id=5C5E061130630A68%21107&cid=5C5E061130630A68&parId=root&parQt=sharedby&o=OneUp)からNWPU-RESISC45.rarをダウンロードし，/home/user/に置く．
+1. ImageNet-1kを[リンク](https://image-net.org/index.php)からダウンロードし，/home/user/dataset/に置き，解凍する．([参考](https://zenn.dev/hidetoshi/articles/20210703_how_to_download_imagenet))
+    ```code
+    cd /home/user/dataset
+    mkdir ILSVRC2012_img_train
+    tar -xvf ILSVRC2012_img_train.tar -C ILSVRC2012_img_train/
+    tar -zxvf ILSVRC2012_devkit_t12.tar.gz
+    ```
 1. download_sample.shの内容を各自の環境に合わせて変更し，実行する．**APIキーを公開しないようにすること！！！**
 1. データセットを分割するために，split_dataset.pyを実行する．
 
