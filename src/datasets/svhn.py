@@ -47,13 +47,11 @@ class SVHN:
 
 if __name__ == "__main__":
     # 動作検証
-    import torchvision.transforms as transforms
+    import open_clip
 
-    preprocess = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-    ])
+    _, preprocess, _ = open_clip.create_model_and_transforms(
+        "ViT-B-32", "openai", cache_dir=".cache"
+    )
 
     root = os.path.expanduser("dataset")
     d = SVHN(preprocess, location=root)

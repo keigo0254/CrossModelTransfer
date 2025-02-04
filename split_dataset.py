@@ -1,4 +1,3 @@
-# Split the dataset into train, val, and test folders
 import glob
 import os
 import random

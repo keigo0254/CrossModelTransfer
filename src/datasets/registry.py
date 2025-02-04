@@ -5,18 +5,18 @@ import sys
 import torch
 from torch.utils.data.dataset import random_split
 
-from datasets.cars import Cars
-from datasets.cifar10 import CIFAR10
-from datasets.cifar100 import CIFAR100
-from datasets.dtd import DTD
-from datasets.eurosat import EuroSAT, EuroSATVal
-from datasets.gtsrb import GTSRB
-from datasets.imagenet import ImageNet
-from datasets.mnist import MNIST
-from datasets.resisc45 import RESISC45
-from datasets.stl10 import STL10
-from datasets.svhn import SVHN
-from datasets.sun397 import SUN397
+from cars import Cars
+from cifar10 import CIFAR10
+from cifar100 import CIFAR100
+from dtd import DTD
+from eurosat import EuroSAT, EuroSATVal
+from gtsrb import GTSRB
+from imagenet import ImageNet
+from mnist import MNIST
+from resisc45 import RESISC45
+from stl10 import STL10
+from svhn import SVHN
+from sun397 import SUN397
 
 
 registry = {
@@ -79,7 +79,7 @@ def split_train_into_train_val(dataset, new_dataset_class_name, batch_size, num_
     return new_dataset
 
 
-def get_dataset(dataset_name, preprocess, location, batch_size=128, num_workers=12, val_fraction=0.1, max_val_samples=5000):
+def get_dataset(dataset_name, preprocess, location, batch_size=32, num_workers=12, val_fraction=0.1, max_val_samples=5000):
     if dataset_name.endswith("Val"):
         # Handle val splits
         if dataset_name in registry:
