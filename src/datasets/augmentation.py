@@ -1,17 +1,17 @@
 import random
+from typing import List
 
-from PIL import ImageFilter, ImageOps
+from PIL import ImageFilter, ImageOps, Image
 import numpy as np
-from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
 
 
 class gray_scale(object):
-    def __init__(self, p=0.2):
+    def __init__(self, p: float = 0.2) -> None:
         self.p = p
         self.transf = transforms.Grayscale(3)
 
-    def __call__(self, img):
+    def __call__(self, img: Image) -> Image:
         if random.random() < self.p:
             return self.transf(img)
         else:
@@ -19,11 +19,11 @@ class gray_scale(object):
 
 
 class horizontal_flip(object):
-    def __init__(self, p=0.2 ,activate_pred=False):
+    def __init__(self, p: float = 0.2 ,activate_pred: bool = False) -> None:
         self.p = p
         self.transf = transforms.RandomHorizontalFlip(p=1.0)
 
-    def __call__(self, img):
+    def __call__(self, img: Image) -> Image:
         if random.random() < self.p:
             return self.transf(img)
         else:
@@ -31,10 +31,10 @@ class horizontal_flip(object):
 
 
 class Solarization(object):
-    def __init__(self, p=0.2):
+    def __init__(self, p: float = 0.2) -> None:
         self.p = p
 
-    def __call__(self, img):
+    def __call__(self, img: Image) -> Image:
         if random.random() < self.p:
             return ImageOps.solarize(img)
         else:
@@ -42,12 +42,12 @@ class Solarization(object):
 
 
 class GaussianBlur(object):
-    def __init__(self, p=0.1, radius_min=0.1, radius_max=2.):
+    def __init__(self, p: float = 0.1, radius_min: float = 0.1, radius_max: float = 2.) -> None:
         self.prob = p
         self.radius_min = radius_min
         self.radius_max = radius_max
 
-    def __call__(self, img):
+    def __call__(self, img: Image) -> Image:
         do_it = random.random() <= self.prob
         if not do_it:
             return img
@@ -60,7 +60,10 @@ class GaussianBlur(object):
         return img
 
 
-def get_augmented_preprocess_fn(preprocess, p: float = 1.0):
+def get_augmented_preprocess_fn(
+    preprocess: transforms,
+    p: float = 1.0
+) -> transforms.Compose[List]:
     mean = np.array(preprocess.transforms[3].mean)
     std = np.array(preprocess.transforms[3].std)
 

@@ -1,7 +1,10 @@
+# Original Code: 
+# https://github.com/mlfoundations/task_vectors/issues/1
 import glob
 import os
 import random
 import shutil
+from typing import List
 import scipy.io
 import tarfile
 
@@ -10,7 +13,11 @@ base_dir = os.path.expanduser("~/dataset")
 
 
 ### PROCESS SUN397 DATASET
-def process_dataset(txt_file, downloaded_data_path, output_folder):
+def process_dataset(
+    txt_file: str | os.PathLike,
+    downloaded_data_path: str | os.PathLike,
+    output_folder: str | os.PathLike
+) -> None:
     with open(txt_file, 'r') as file:
         lines = file.readlines()
 
@@ -25,8 +32,7 @@ def process_dataset(txt_file, downloaded_data_path, output_folder):
 
         full_input_path = os.path.join(downloaded_data_path, input_path[1:])
         output_file_path = os.path.join(output_class_folder, filename)
-        # print(final_folder_name, filename, output_class_folder, full_input_path, output_file_path)
-        # exit()
+
         shutil.copy(full_input_path, output_file_path)
         if i % 100 == 0:
             print(f"Processed {i}/{len(lines)} images")
@@ -48,14 +54,23 @@ process_dataset(
 
 
 ### PROCESS EuroSAT_RGB DATASET
-def create_directory_structure(dst_dir, classes):
+def create_directory_structure(
+    dst_dir: str | os.PathLike,
+    classes: List[str]
+) -> None:
     for dataset in ['train', 'val', 'test']:
         path = os.path.join(dst_dir, dataset)
         os.makedirs(path, exist_ok=True)
         for cls in classes:
             os.makedirs(os.path.join(path, cls), exist_ok=True)
 
-def split_dataset(dst_dir, src_dir, classes, val_size=270, test_size=270):
+def split_dataset(
+    dst_dir: str | os.PathLike,
+    src_dir: str | os.PathLike,
+    classes: List[str],
+    val_size: int = 270,
+    test_size: int = 270
+) -> None:
     for cls in classes:
         class_path = os.path.join(src_dir, cls)
         images = os.listdir(class_path)
@@ -70,23 +85,22 @@ def split_dataset(dst_dir, src_dir, classes, val_size=270, test_size=270):
             dst_path = os.path.join(dst_dir, 'train', cls, img)
             print(src_path, dst_path)
             shutil.copy(src_path, dst_path)
-            # break
+
         for img in val_images:
             src_path = os.path.join(class_path, img)
             dst_path = os.path.join(dst_dir, 'val', cls, img)
             print(src_path, dst_path)
             shutil.copy(src_path, dst_path)
-            # break
+
         for img in test_images:
             src_path = os.path.join(class_path, img)
             dst_path = os.path.join(dst_dir, 'test', cls, img)
             print(src_path, dst_path)
             shutil.copy(src_path, dst_path)
-            # break
 
 
 src_dir = f'{base_dir}/euro_sat/2750'    # replace with the path to your dataset
-dst_dir = f'{base_dir}/EuroSAT_splits'  # replace with the path to the output directory
+dst_dir = f'{base_dir}/EuroSAT_splits'   # replace with the path to the output directory
 
 classes = [d for d in os.listdir(src_dir) if os.path.isdir(os.path.join(src_dir, d))]
 create_directory_structure(dst_dir, classes)
@@ -94,7 +108,11 @@ split_dataset(dst_dir, src_dir, classes)
 
 
 ### PROCESS DTD DATASET
-def process_dataset(txt_file, downloaded_data_path, output_folder):
+def process_dataset(
+    txt_file: str | os.PathLike,
+    downloaded_data_path: str | os.PathLike,
+    output_folder: str | os.PathLike
+) -> None:
     with open(txt_file, 'r') as file:
         lines = file.readlines()
 
@@ -118,15 +136,20 @@ downloaded_data_path = f"{base_dir}/dtd/images"
 output_path = f"{base_dir}/dtd"
 
 process_dataset(
-    f'{base_dir}/dtd/labels/train.txt', downloaded_data_path, os.path.join(output_path, "train")
+    f'{base_dir}/dtd/labels/train.txt',
+    downloaded_data_path,
+    os.path.join(output_path, "train")
 )
 process_dataset(
-    f'{base_dir}/dtd/labels/test.txt', downloaded_data_path, os.path.join(output_path, "val")
+    f'{base_dir}/dtd/labels/test.txt',
+    downloaded_data_path,
+    os.path.join(output_path, "val")
 )
 
 
 ### PROCESS ImageNet DATASET
 # https://zenn.dev/hidetoshi/articles/20210717_pytorch_dataset_for_imagenet
+# process train dataset
 target_dir = f"{base_dir}/ILSVRC2012_img_train/"
 target_dir = shutil.move(target_dir, f"{base_dir}/imagenet/train")
 for tar_filepath in glob.glob(os.path.join(target_dir, "*.tar")):
@@ -137,6 +160,7 @@ for tar_filepath in glob.glob(os.path.join(target_dir, "*.tar")):
     os.remove(tar_filepath)
 os.remove(f"{base_dir}/ILSVRC2012_img_train.tar")
 
+# process val dataset
 imagenet_val_tar_path = f"{base_dir}/ILSVRC2012_img_val.tar"
 target_dir = f"{base_dir}/imagenet/val_in_folder/"
 meta_path = f"{base_dir}/ILSVRC2012_devkit_t12/data/meta.mat"

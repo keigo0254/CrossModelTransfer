@@ -5,18 +5,18 @@ import sys
 import torch
 from torch.utils.data.dataset import random_split
 
-from cars import Cars
-from cifar10 import CIFAR10
-from cifar100 import CIFAR100
-from dtd import DTD
-from eurosat import EuroSAT, EuroSATVal
-from gtsrb import GTSRB
-from imagenet import ImageNet
-from mnist import MNIST
-from resisc45 import RESISC45
-from stl10 import STL10
-from svhn import SVHN
-from sun397 import SUN397
+from .cars import Cars
+from .cifar10 import CIFAR10
+from .cifar100 import CIFAR100
+from .dtd import DTD
+from .eurosat import EuroSAT, EuroSATVal
+from .gtsrb import GTSRB
+from .imagenet import ImageNet
+from .mnist import MNIST
+from .resisc45 import RESISC45
+from .stl10 import STL10
+from .svhn import SVHN
+from .sun397 import SUN397
 
 
 registry = {

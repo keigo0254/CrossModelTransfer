@@ -13,6 +13,8 @@ class Args:
     cache_root: str = config(default=os.path.expanduser(".cache"), help="Path to cache root")
     result_root: str = config(default=os.path.expanduser("result"), help="Path to result root")
     fig_root: str = config(default=os.path.expanduser("fig"), help="Path to figure root")
+    result : str = config(default=None, help="Path to result file")
+    fig : str = config(default=None, help="Path to figure file")
 
     pretrained_model_path: str = config(default=None, help="Path to pretrained model")
     base_model_path: str = config(default=None, help="Path to base model for task arithmetic")
@@ -22,8 +24,8 @@ class Args:
     finetuning_type: str = config(default="full", help="Finetuning type")              # full, linear, lora, singular
     adjust_type: str = config(default="none", help="Adjust type")                      # regularize, qr, cayley, reconstruct
 
-    train_datasets: List[str] = config(default=None, help="Train datasets")   # Cars, DTD, EuroSAT, GTSRB, MNIST, RESISC45, SUN397, SVHN, STL10, CIFAR10, CIFAR100, ImageNet
-    eval_datasets: List[str] = config(default=None, help="Evaluate datasets") # Cars, DTD, EuroSAT, GTSRB, MNIST, RESISC45, SUN397, SVHN, STL10, CIFAR10, CIFAR100, ImageNet
+    train_datasets: lambda x: x.split(",") = config(default=None, help="Train datasets")   # Cars, DTD, EuroSAT, GTSRB, MNIST, RESISC45, SUN397, SVHN, STL10, CIFAR10, CIFAR100, ImageNet
+    eval_datasets: lambda x: x.split(",") = config(default=None, help="Evaluate datasets") # Cars, DTD, EuroSAT, GTSRB, MNIST, RESISC45, SUN397, SVHN, STL10, CIFAR10, CIFAR100, ImageNet
 
     save: bool = config(default=False, help="Whether to save the model")
     wandb: bool = config(default=False, help="Whether to use wandb")
@@ -47,7 +49,7 @@ class Args:
     num_images: int = config(default=None, help="Number of images")
     num_augments: int = config(default=None, help="Number of augments")
 
-    device: torch.device = config(default=torch.device("cpu"), help="Device")
+    device: torch.device = config(default=torch.device("cuda"), help="Device")
 
 
 if __name__ == "__main__":

@@ -1,11 +1,12 @@
 import random
-from typing import Dict, List
+from typing import List
 
-from PIL import ImageFilter, ImageOps
 import torch
 from torch.utils.data import Dataset, DataLoader
-from torchvision.datasets import VisionDataset
 import torchvision.transforms as transforms
+
+from .common import get_dataloader, maybe_dictionarize
+from .registry import get_dataset
 
 
 class MixedDataset(Dataset):
@@ -16,13 +17,16 @@ class MixedDataset(Dataset):
         self.dataset = []
         self.preprocess = preprocess
 
+        print(f"Creating mixed dataset with {num_images} images from each dataset")
         for dataset_name in dataset_list:
-            dataset = get_dataset(dataset_name, transforms.ToTensor(), root, batch_size=1)
+            print(f"Loading {num_images} images from {dataset_name}")
+            dataset = get_dataset(dataset_name, transforms.ToTensor(), root, batch_size=1, num_workers=0)
             dataloader = get_dataloader(dataset, is_train=True, args=None)
-            for i, (img, label) in enumerate(dataloader):
+            for i, batch in enumerate(dataloader):
                 if i >= num_images:
                     break
-                self.dataset.append((img, label, dataset_name))
+                batch = maybe_dictionarize(batch)
+                self.dataset.append((batch["images"], batch["labels"], dataset_name))
 
         random.shuffle(self.dataset)
 
@@ -48,8 +52,6 @@ if __name__ == "__main__":
     import open_clip
 
     from augmentation import get_augmented_preprocess_fn
-    from common import get_dataloader
-    from registry import get_dataset
 
 
     root = os.path.expanduser("dataset")

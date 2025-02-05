@@ -3,7 +3,7 @@ import os
 import numpy as np
 import torch
 
-from common import ImageFolderWithPaths, SubsetSampler
+from .common import ImageFolderWithPaths, SubsetSampler
 
 
 imagenet_classnames = [
