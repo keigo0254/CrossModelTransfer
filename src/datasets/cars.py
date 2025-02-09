@@ -131,7 +131,7 @@ class Cars:
                  preprocess,
                  location=os.path.expanduser("dataset"),
                  batch_size=32,
-                 num_workers=12):
+                 num_workers=4):
         # Data loading code
 
         self.train_dataset = PytorchStanfordCars(location, "train", preprocess, download=False)

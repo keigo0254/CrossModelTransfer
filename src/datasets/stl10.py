@@ -9,7 +9,7 @@ class STL10:
                  preprocess,
                  location=os.path.expanduser("dataset"),
                  batch_size=32,
-                 num_workers=12):
+                 num_workers=4):
 
         location = os.path.join(location, "stl10")
         self.train_dataset = datasets.STL10(

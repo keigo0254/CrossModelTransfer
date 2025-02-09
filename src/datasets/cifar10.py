@@ -14,7 +14,7 @@ class CIFAR10:
     def __init__(self, preprocess,
                  location=os.path.expanduser("dataset"),
                  batch_size=32,
-                 num_workers=12):
+                 num_workers=4):
 
         self.train_dataset = PyTorchCIFAR10(
             root=location, download=True, train=True, transform=preprocess

@@ -9,7 +9,7 @@ class MNIST:
                  preprocess,
                  location=os.path.expanduser("dataset"),
                  batch_size=32,
-                 num_workers=12):
+                 num_workers=4):
 
         self.train_dataset = datasets.MNIST(
             root=location,

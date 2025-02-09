@@ -180,7 +180,7 @@ class ImageNet:
                  preprocess,
                  location=os.path.expanduser("dataset"),
                  batch_size=32,
-                 num_workers=12):
+                 num_workers=4):
         self.preprocess = preprocess
         self.location = location
         self.batch_size = batch_size

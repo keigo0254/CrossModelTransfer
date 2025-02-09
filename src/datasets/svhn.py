@@ -9,7 +9,7 @@ class SVHN:
                  preprocess,
                  location=os.path.expanduser("dataset"),
                  batch_size=32,
-                 num_workers=12):
+                 num_workers=4):
 
         # to fit with repo conventions for location
         modified_location = os.path.join(location, "svhn")

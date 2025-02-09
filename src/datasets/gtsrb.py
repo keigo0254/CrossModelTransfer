@@ -126,7 +126,7 @@ class GTSRB:
                  preprocess,
                  location=os.path.expanduser("dataset"),
                  batch_size=128,
-                 num_workers=12):
+                 num_workers=4):
 
         # to fit with repo conventions for location
         self.train_dataset = PyTorchGTSRB(
