@@ -24,8 +24,11 @@ class Args:
     finetuning_type: str = config(default="full", help="Finetuning type")              # full, linear, lora, singular
     adjust_type: str = config(default="none", help="Adjust type")                      # regularize, qr, cayley, reconstruct
 
-    train_datasets: lambda x: x.split(",") = config(default=None, help="Train datasets")   # Cars, DTD, EuroSAT, GTSRB, MNIST, RESISC45, SUN397, SVHN, STL10, CIFAR10, CIFAR100, ImageNet
-    eval_datasets: lambda x: x.split(",") = config(default=None, help="Evaluate datasets") # Cars, DTD, EuroSAT, GTSRB, MNIST, RESISC45, SUN397, SVHN, STL10, CIFAR10, CIFAR100, ImageNet
+    # Cars, DTD, EuroSAT, GTSRB, MNIST, RESISC45, SUN397, SVHN, STL10, CIFAR10, CIFAR100, ImageNet
+    train_datasets: lambda x: x.split(",") = config(default=None, help="Train datasets")
+    eval_datasets: lambda x: x.split(",") = config(default=None, help="Evaluate datasets")
+    train_dataset: str = config(default=None, help="Train dataset")
+    eval_dataset: str = config(default=None, help="Evaluate dataset")
 
     save: bool = config(default=False, help="Whether to save the model")
     wandb: bool = config(default=False, help="Whether to use wandb")

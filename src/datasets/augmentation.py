@@ -1,3 +1,4 @@
+# データ拡張
 import random
 from typing import List
 
@@ -7,6 +8,7 @@ import torchvision.transforms as transforms
 
 
 class gray_scale(object):
+    # グレースケール変換
     def __init__(self, p: float = 0.2) -> None:
         self.p = p
         self.transf = transforms.Grayscale(3)
@@ -19,6 +21,7 @@ class gray_scale(object):
 
 
 class horizontal_flip(object):
+    # 左右反転
     def __init__(self, p: float = 0.2 ,activate_pred: bool = False) -> None:
         self.p = p
         self.transf = transforms.RandomHorizontalFlip(p=1.0)
@@ -31,6 +34,7 @@ class horizontal_flip(object):
 
 
 class Solarization(object):
+    # ソラリゼーション (閾値を超えたピクセルの値を反転)
     def __init__(self, p: float = 0.2) -> None:
         self.p = p
 
@@ -42,6 +46,7 @@ class Solarization(object):
 
 
 class GaussianBlur(object):
+    # ガウシアンブラー
     def __init__(self, p: float = 0.1, radius_min: float = 0.1, radius_max: float = 2.) -> None:
         self.prob = p
         self.radius_min = radius_min
@@ -64,6 +69,7 @@ def get_augmented_preprocess_fn(
     preprocess: transforms,
     p: float = 1.0
 ) -> transforms.Compose[List]:
+    # データ拡張を行う変換を返す関数
     mean = np.array(preprocess.transforms[3].mean)
     std = np.array(preprocess.transforms[3].std)
 
@@ -87,6 +93,7 @@ def get_augmented_preprocess_fn(
 
 
 if __name__ == "__main__":
+    # 動作確認用
     import os
 
     import open_clip
