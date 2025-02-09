@@ -24,6 +24,12 @@
     docker stop <container_name>    # コンテナを止める
     ```
 
+## Fine-Tuning
+cmd/finetune.sh内の変数を適宜書き換えてから実行してください．
+```code
+bash cmd/finetune.sh
+nohup bash cmd/finetune.sh > log/finetune.log &     # バックグラウンド実行&ログの保存
+```
 
 ## Original Codes
 https://github.com/mlfoundations/task_vectors

@@ -212,7 +212,7 @@ def finetune(rank, args: Args) -> ImageEncoder:
                         f"{args.lr}_{args.rank}_{args.alpha}"
                         if args.finetuning_type == "lora" else f"{args.lr}",
                         "finetune",
-                        f"finetuned_on_{args.train_dataset}Val_{args.seed}_{step}.pt"
+                        f"finetuned_on_{args.train_dataset}_{args.seed}_{step}.pt"
                     )
                     image_encoder_to_save = copy.deepcopy(ddp_model.module.image_encoder)
                     image_encoder_to_save.save(filename)
@@ -226,7 +226,7 @@ def finetune(rank, args: Args) -> ImageEncoder:
             f"{args.lr}_{args.rank}_{args.alpha}"
             if args.finetuning_type == "lora" else f"{args.lr}",
             "finetune",
-            f"finetuned_on_{args.train_dataset}Val_{args.seed}.pt"
+            f"finetuned_on_{args.train_dataset}_{args.seed}.pt"
         )
         ddp_model.module.image_encoder.save(filename)
 
@@ -276,7 +276,7 @@ if __name__ == "__main__":
             f"{args.lr}_{args.rank}_{args.alpha}"
             if args.finetuning_type == "lora" else f"{args.lr}",
             "finetune",
-            f"{args.train_dataset}Val_{args.seed}.db"
+            f"{args.train_dataset}_{args.seed}.json"
         )
         args.fig = os.path.join(
             args.fig_root,
@@ -286,7 +286,7 @@ if __name__ == "__main__":
             f"{args.lr}_{args.rank}_{args.alpha}"
             if args.finetuning_type == "lora" else f"{args.lr}",
             "finetune",
-            f"{args.train_dataset}Val_{args.seed}.png"
+            f"{args.train_dataset}_{args.seed}.jpg"
         )
 
         torch.multiprocessing.spawn(finetune, args=(args,), nprocs=args.world_size)

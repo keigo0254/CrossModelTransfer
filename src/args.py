@@ -21,7 +21,7 @@ class Args:
 
     model_architecture: str = config(default="ViT-B-32", help="Model architecture")    # ViT-B-32, ViT-B-16, ViT-L-14
     pretrained: str = config(default="openai", help="Pretrained type")                 # openai, laion400m_e31, etc.
-    finetuning_type: str = config(default="full", help="Finetuning type")              # full, linear, lora, singular
+    finetuning_type: str = config(default="full", help="Finetuning type")              # full, linear, lora
     adjust_type: str = config(default="none", help="Adjust type")                      # regularize, qr, cayley, reconstruct
 
     # Cars, DTD, EuroSAT, GTSRB, MNIST, RESISC45, SUN397, SVHN, STL10, CIFAR10, CIFAR100, ImageNet
