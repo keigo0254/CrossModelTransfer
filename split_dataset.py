@@ -1,4 +1,5 @@
-# Original Code: 
+# データセットのディレクトリを整理する
+# Original Code:
 # https://github.com/mlfoundations/task_vectors/issues/1
 import glob
 import os
@@ -12,7 +13,7 @@ import tarfile
 base_dir = os.path.expanduser("~/dataset")
 
 
-### PROCESS SUN397 DATASET
+# PROCESS SUN397 DATASET
 def process_dataset(
     txt_file: str | os.PathLike,
     downloaded_data_path: str | os.PathLike,
@@ -42,18 +43,18 @@ downloaded_data_path = f"{base_dir}/sun397"
 output_path = f"{base_dir}/sun397"
 
 process_dataset(
-    os.path.join(downloaded_data_path, 'Training_01.txt'), 
-    os.path.join(downloaded_data_path, 'SUN397'), 
+    os.path.join(downloaded_data_path, 'Training_01.txt'),
+    os.path.join(downloaded_data_path, 'SUN397'),
     os.path.join(output_path, "train")
 )
 process_dataset(
-    os.path.join(downloaded_data_path, 'Testing_01.txt'), 
-    os.path.join(downloaded_data_path, 'SUN397'), 
+    os.path.join(downloaded_data_path, 'Testing_01.txt'),
+    os.path.join(downloaded_data_path, 'SUN397'),
     os.path.join(output_path, "val")
 )
 
 
-### PROCESS EuroSAT_RGB DATASET
+# PROCESS EuroSAT_RGB DATASET
 def create_directory_structure(
     dst_dir: str | os.PathLike,
     classes: List[str]
@@ -63,6 +64,7 @@ def create_directory_structure(
         os.makedirs(path, exist_ok=True)
         for cls in classes:
             os.makedirs(os.path.join(path, cls), exist_ok=True)
+
 
 def split_dataset(
     dst_dir: str | os.PathLike,
@@ -79,7 +81,7 @@ def split_dataset(
         val_images = images[:val_size]
         test_images = images[val_size:val_size + test_size]
         train_images = images[val_size + test_size:]
-        
+
         for img in train_images:
             src_path = os.path.join(class_path, img)
             dst_path = os.path.join(dst_dir, 'train', cls, img)
@@ -99,15 +101,18 @@ def split_dataset(
             shutil.copy(src_path, dst_path)
 
 
-src_dir = f'{base_dir}/euro_sat/2750'    # replace with the path to your dataset
-dst_dir = f'{base_dir}/EuroSAT_splits'   # replace with the path to the output directory
+src_dir = f'{base_dir}/euro_sat/2750'
+dst_dir = f'{base_dir}/EuroSAT_splits'
 
-classes = [d for d in os.listdir(src_dir) if os.path.isdir(os.path.join(src_dir, d))]
+classes = [
+    d for d in os.listdir(src_dir)
+    if os.path.isdir(os.path.join(src_dir, d))
+]
 create_directory_structure(dst_dir, classes)
 split_dataset(dst_dir, src_dir, classes)
 
 
-### PROCESS DTD DATASET
+# PROCESS DTD DATASET
 def process_dataset(
     txt_file: str | os.PathLike,
     downloaded_data_path: str | os.PathLike,
@@ -147,7 +152,8 @@ process_dataset(
 )
 
 
-### PROCESS ImageNet DATASET
+# PROCESS ImageNet DATASET
+# Original Code:
 # https://zenn.dev/hidetoshi/articles/20210717_pytorch_dataset_for_imagenet
 # process train dataset
 target_dir = f"{base_dir}/ILSVRC2012_img_train/"
@@ -164,13 +170,18 @@ os.remove(f"{base_dir}/ILSVRC2012_img_train.tar")
 imagenet_val_tar_path = f"{base_dir}/ILSVRC2012_img_val.tar"
 target_dir = f"{base_dir}/imagenet/val_in_folder/"
 meta_path = f"{base_dir}/ILSVRC2012_devkit_t12/data/meta.mat"
-truth_label_path = f"{base_dir}/ILSVRC2012_devkit_t12/data/ILSVRC2012_validation_ground_truth.txt"
+truth_label_path = (
+    f"{base_dir}/ILSVRC2012_devkit_t12/"
+    f"data/ILSVRC2012_validation_ground_truth.txt"
+)
 
 meta = scipy.io.loadmat(meta_path, squeeze_me=True)
 ilsvrc2012_id_to_wnid = {m[0]: m[1] for m in meta["synsets"]}
 
 with open(truth_label_path, "r") as f:
-    ilsvrc_ids = tuple(int(ilsvrc_id) for ilsvrc_id in f.read().split("\n")[:-1])
+    ilsvrc_ids = tuple(
+        int(ilsvrc_id) for ilsvrc_id in f.read().split("\n")[:-1]
+    )
 
 for ilsvrc_id in ilsvrc_ids:
     wnid = ilsvrc2012_id_to_wnid[ilsvrc_id]

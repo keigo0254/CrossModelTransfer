@@ -7,7 +7,8 @@ from torchvision.datasets import CIFAR10 as PyTorchCIFAR10
 from torchvision.datasets import VisionDataset
 
 
-cifar_classnames = ["airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"]
+cifar_classnames = ["airplane", "automobile", "bird",
+                    "cat", "deer", "dog", "frog", "horse", "ship", "truck"]
 
 
 class CIFAR10:
@@ -45,7 +46,8 @@ class BasicVisionDataset(VisionDataset):
     def __init__(self, images, targets, transform=None, target_transform=None):
         if transform is not None:
             transform.transforms.insert(0, convert)
-        super(BasicVisionDataset, self).__init__(root=None, transform=transform, target_transform=target_transform)
+        super(BasicVisionDataset, self).__init__(
+            root=None, transform=transform, target_transform=target_transform)
         assert len(images) == len(targets)
 
         self.images = images

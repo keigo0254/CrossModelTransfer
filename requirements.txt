@@ -1,5 +1,8 @@
+autodocstring==0.1.2
+autopep8==2.3.2
 classopt==0.2.1
 datasets==2.18.0
+flake8==7.1.1
 ipdb
 ipykernel==6.29.5
 jupyter==1.0.0

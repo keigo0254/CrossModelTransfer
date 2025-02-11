@@ -31,8 +31,12 @@ RUN pip install --upgrade pip && \
     conda env create -f environment.yml
 ENV PATH /opt/miniconda3/envs/task_arithmetic/bin:$PATH
 
+RUN conda run -n task_arithmetic pip install autopep8
+
 COPY requirements.txt .
 RUN pip install -r requirements.txt
+
+RUN pip install --user autopep8
 
 ENV PYTHONBREAKPOINT=ipdb.set_trace
 

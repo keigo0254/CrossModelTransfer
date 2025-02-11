@@ -42,7 +42,8 @@ class PytorchStanfordCars(VisionDataset):
         try:
             import scipy.io as sio
         except ImportError:
-            raise RuntimeError("Scipy is not found. This dataset needs to have scipy installed: pip install scipy")
+            raise RuntimeError(
+                "Scipy is not found. This dataset needs to have scipy installed: pip install scipy")
 
         super().__init__(root, transform=transform, target_transform=target_transform)
 
@@ -61,17 +62,20 @@ class PytorchStanfordCars(VisionDataset):
             self.download()
 
         if not self._check_exists():
-            raise RuntimeError("Dataset not found. You can use download=True to download it")
+            raise RuntimeError(
+                "Dataset not found. You can use download=True to download it")
 
         self._samples = [
             (
                 str(self._images_base_path / annotation["fname"]),
-                annotation["class"] - 1,  # Original target mapping  starts from 1, hence -1
+                # Original target mapping  starts from 1, hence -1
+                annotation["class"] - 1,
             )
             for annotation in sio.loadmat(self._annotations_mat_path, squeeze_me=True)["annotations"]
         ]
 
-        self.classes = sio.loadmat(str(devkit / "cars_meta.mat"), squeeze_me=True)["class_names"].tolist()
+        self.classes = sio.loadmat(
+            str(devkit / "cars_meta.mat"), squeeze_me=True)["class_names"].tolist()
         self.class_to_idx = {cls: i for i, cls in enumerate(self.classes)}
 
     def __len__(self) -> int:
@@ -134,7 +138,8 @@ class Cars:
                  num_workers=4):
         # Data loading code
 
-        self.train_dataset = PytorchStanfordCars(location, "train", preprocess, download=False)
+        self.train_dataset = PytorchStanfordCars(
+            location, "train", preprocess, download=False)
         self.train_loader = torch.utils.data.DataLoader(
             self.train_dataset,
             shuffle=True,
@@ -142,7 +147,8 @@ class Cars:
             num_workers=num_workers,
         )
 
-        self.test_dataset = PytorchStanfordCars(location, "test", preprocess, download=True)
+        self.test_dataset = PytorchStanfordCars(
+            location, "test", preprocess, download=True)
         self.test_loader = torch.utils.data.DataLoader(
             self.test_dataset,
             batch_size=batch_size,

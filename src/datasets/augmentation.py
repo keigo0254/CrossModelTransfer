@@ -1,4 +1,4 @@
-# データ拡張
+# データ拡張を行う
 import random
 from typing import List
 
@@ -10,6 +10,7 @@ import torchvision.transforms as transforms
 class gray_scale(object):
     # グレースケール変換
     def __init__(self, p: float = 0.2) -> None:
+
         self.p = p
         self.transf = transforms.Grayscale(3)
 
@@ -22,7 +23,7 @@ class gray_scale(object):
 
 class horizontal_flip(object):
     # 左右反転
-    def __init__(self, p: float = 0.2 ,activate_pred: bool = False) -> None:
+    def __init__(self, p: float = 0.2, activate_pred: bool = False) -> None:
         self.p = p
         self.transf = transforms.RandomHorizontalFlip(p=1.0)
 
@@ -98,12 +99,12 @@ if __name__ == "__main__":
 
     import open_clip
 
-
     root = os.path.expanduser("dataset")
 
     _, original_preprocess_fn, _ = open_clip.create_model_and_transforms(
         "ViT-B-32", "openai", cache_dir=".cache"
     )
 
-    augmented_preprocess_fn = get_augmented_preprocess_fn(original_preprocess_fn)
+    augmented_preprocess_fn = get_augmented_preprocess_fn(
+        original_preprocess_fn)
     print(augmented_preprocess_fn)
