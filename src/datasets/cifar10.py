@@ -1,4 +1,13 @@
-# CIFAR-10のデータセットを扱うためのクラスを定義
+"""
+CIFAR-10データセットを扱うモジュール
+
+CIFAR-10データセットを読み込み、前処理を行うためのクラスを提供する。
+
+Classes:
+    CIFAR10: CIFAR-10データセットのラッパークラス
+    BasicVisionDataset: 画像分類のためのデータセットクラス
+"""
+
 import os
 from typing import Any, List, Tuple
 
@@ -10,65 +19,79 @@ from torchvision.datasets import CIFAR10 as PyTorchCIFAR10
 from torchvision.datasets import VisionDataset
 
 
-cifar_classnames = ["airplane", "automobile", "bird",
-                    "cat", "deer", "dog", "frog", "horse", "ship", "truck"]
+# CIFAR-10のクラス名リスト
+cifar_classnames = [
+    "airplane", "automobile", "bird", "cat", "deer",
+    "dog", "frog", "horse", "ship", "truck"
+]
 
 
 class CIFAR10:
-    """
-    CIFAR-10データセットのラッパークラス
+    """CIFAR-10データセットのラッパークラス
 
     Attributes:
-        train_dataset (PyTorchCIFAR10): 学習用データセット
-        train_loader (torch.utils.data.DataLoader): 学習用データローダー
-        test_dataset (PyTorchCIFAR10): テスト用データセット
-        test_loader (torch.utils.data.DataLoader): テスト用データローダー
-        classnames (List[str]): クラス名のリスト
+        train_dataset: 学習用データセット
+        train_loader: 学習用データローダー
+        test_dataset: テスト用データセット
+        test_loader: テスト用データローダー
+        classnames: クラス名のリスト
     """
-    def __init__(self, preprocess: torchvision.transforms.Compose,
-                 location: str | os.PathLike = os.path.expanduser("dataset"),
-                 batch_size: int = 32,
-                 num_workers: int = 4) -> None:
-        """
-        CIFAR-10データセットを扱うクラスを初期化
+
+    def __init__(
+        self,
+        preprocess: torchvision.transforms.Compose,
+        location: str | os.PathLike = os.path.expanduser("dataset"),
+        batch_size: int = 32,
+        num_workers: int = 4
+    ) -> None:
+        """CIFAR-10データセットを扱うクラスを初期化
 
         Args:
-            preprocess (torchvision.transforms.Compose): 前処理関数
-            location (str | os.PathLike, optional): データセットの保存先ディレクトリ. \
+            preprocess: 前処理関数
+            location: データセットの保存先ディレクトリ.
                 Defaults to os.path.expanduser("dataset").
-            batch_size (int, optional): バッチサイズ. Defaults to 32.
-            num_workers (int, optional): データローダーの並列数. Defaults to 4.
+            batch_size: バッチサイズ. Defaults to 32.
+            num_workers: データローダーの並列数. Defaults to 4.
         """
+        # 訓練データの設定
         self.train_dataset = PyTorchCIFAR10(
-            root=location, download=True, train=True, transform=preprocess
+            root=location,
+            download=True,
+            train=True,
+            transform=preprocess
         )
-
         self.train_loader = torch.utils.data.DataLoader(
-            self.train_dataset, batch_size=batch_size,
-            shuffle=True, num_workers=num_workers
+            self.train_dataset,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers
         )
 
+        # テストデータの設定
         self.test_dataset = PyTorchCIFAR10(
-            root=location, download=True, train=False, transform=preprocess
+            root=location,
+            download=True,
+            train=False,
+            transform=preprocess
         )
-
         self.test_loader = torch.utils.data.DataLoader(
-            self.test_dataset, batch_size=batch_size,
-            shuffle=False, num_workers=num_workers
+            self.test_dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers
         )
 
         self.classnames = self.test_dataset.classes
 
 
 def convert(x: np.ndarray | Any) -> Image | Any:
-    """
-    numpy.ndarrayをPIL.Imageに変換する
+    """numpy.ndarrayをPIL.Imageに変換する
 
     Args:
-        x (np.ndarray | Any): 変換するデータ
+        x: 変換するデータ
 
     Returns:
-        Image | Any: 変換後のデータ
+        変換後のデータ
     """
     if isinstance(x, np.ndarray):
         return torchvision.transforms.functional.to_pil_image(x)
@@ -76,13 +99,13 @@ def convert(x: np.ndarray | Any) -> Image | Any:
 
 
 class BasicVisionDataset(VisionDataset):
-    """
-    画像分類のためのデータセットクラス(未使用)
+    """画像分類のためのデータセットクラス(未使用)
 
     Attributes:
-        images (List[np.ndarray | Any]): 画像データのリスト
-        targets (List[int]): ラベルのリスト
+        images: 画像データのリスト
+        targets: ラベルのリスト
     """
+
     def __init__(
         self,
         images: List[np.ndarray | Any],
@@ -90,44 +113,42 @@ class BasicVisionDataset(VisionDataset):
         transform: torchvision.transforms.Compose = None,
         target_transform: torchvision.transforms.Compose = None
     ) -> None:
-        """
-        画像分類のためのデータセットクラスを初期化
+        """画像分類のためのデータセットクラスを初期化
 
         Args:
-            images (List[np.ndarray  |  Any]): 画像データのリスト
-            targets (List[int]): ラベルのリスト
-            transform (torchvision.transforms.Compose, optional): 画像の変換関数. \
-                Defaults to None.
-            target_transform (torchvision.transforms.Compose, optional): \
-                ラベルの変換関数. Defaults to None.
+            images: 画像データのリスト
+            targets: ラベルのリスト
+            transform: 画像の変換関数. Defaults to None.
+            target_transform: ラベルの変換関数. Defaults to None.
         """
         if transform is not None:
             transform.transforms.insert(0, convert)
         super(BasicVisionDataset, self).__init__(
-            root=None, transform=transform, target_transform=target_transform)
+            root=None,
+            transform=transform,
+            target_transform=target_transform
+        )
         assert len(images) == len(targets)
 
         self.images = images
         self.targets = targets
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, int]:
-        """
-        指定したインデックスのデータを取得
+        """指定したインデックスのデータを取得
 
         Args:
-            index (int): インデックス
+            index: インデックス
 
         Returns:
-            Tuple[torch.Tensor, int]: 画像データとラベル
+            画像データとラベルのタプル
         """
         return self.transform(self.images[index]), self.targets[index]
 
     def __len__(self) -> int:
-        """
-        データセットのサイズを返す
+        """データセットのサイズを返す
 
         Returns:
-            int: データセットのサイズ
+            データセットのサイズ
         """
         return len(self.targets)
 
@@ -137,7 +158,9 @@ if __name__ == "__main__":
     import open_clip
 
     _, preprocess, _ = open_clip.create_model_and_transforms(
-        "ViT-B-32", "openai", cache_dir=".cache"
+        "ViT-B-32",
+        "openai",
+        cache_dir=".cache"
     )
 
     root = os.path.expanduser("dataset")

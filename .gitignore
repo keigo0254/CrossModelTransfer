@@ -1,6 +1,8 @@
 .cache
 .env
 download.sh
+fig
 log
 pre-src
+result
 wandb

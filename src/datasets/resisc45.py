@@ -1,42 +1,60 @@
+"""RESISC45データセットを扱うモジュール
+
+RESISC45データセットを読み込み、前処理を行うためのクラスを提供する。
+
+Classes:
+    VisionDataset: 基本的な画像データセットの抽象基底クラス
+    VisionClassificationDataset: 画像分類データセットの抽象基底クラス
+    RESISC45Dataset: RESISC45データセットのラッパークラス
+    RESISC45: RESISC45データセットのメインクラス
+"""
+
 import abc
 import os
 from typing import Any, Callable, Dict, Optional, Tuple
 
 import torch
 from torch import Tensor
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from torchvision.datasets import ImageFolder
 from torchvision.datasets.folder import default_loader as pil_loader
+from torchvision.transforms import Compose
 
 
-# modified from: https://github.com/microsoft/torchgeo
 class VisionDataset(Dataset[Dict[str, Any]], abc.ABC):
-    """Abstract base class for datasets lacking geospatial information.
-    This base class is designed for datasets with pre-defined image chips.
+    """基本的な画像データセットの抽象基底クラス
+
+    地理空間情報を持たないデータセット向けの基底クラス。
+    事前に定義された画像チップを持つデータセット用に設計。
     """
 
     @abc.abstractmethod
     def __getitem__(self, index: int) -> Dict[str, Any]:
-        """Return an index within the dataset.
+        """データセット内の指定インデックスのアイテムを返す
+
         Args:
-            index: index to return
+            index: 取得するアイテムのインデックス
+
         Returns:
-            data and labels at that index
+            指定インデックスのデータとラベル
+
         Raises:
-            IndexError: if index is out of range of the dataset
+            IndexError: インデックスが範囲外の場合
         """
 
     @abc.abstractmethod
     def __len__(self) -> int:
-        """Return the length of the dataset.
+        """データセットの長さを返す
+
         Returns:
-            length of the dataset
+            データセットの長さ
         """
 
     def __str__(self) -> str:
-        """Return the informal string representation of the object.
+        """オブジェクトの非公式な文字列表現を返す
+
         Returns:
-            informal string representation
+            非公式な文字列表現
         """
         return f"""\
 {self.__class__.__name__} Dataset
@@ -45,9 +63,10 @@ class VisionDataset(Dataset[Dict[str, Any]], abc.ABC):
 
 
 class VisionClassificationDataset(VisionDataset, ImageFolder):
-    """Abstract base class for classification datasets lacking geospatial information.
-    This base class is designed for datasets with pre-defined image chips which
-    are separated into separate folders per class.
+    """画像分類データセットの抽象基底クラス
+
+    地理空間情報を持たない分類データセット向けの基底クラス。
+    クラスごとに別フォルダに分けられた事前定義の画像チップを持つデータセット用。
     """
 
     def __init__(
@@ -57,18 +76,14 @@ class VisionClassificationDataset(VisionDataset, ImageFolder):
         loader: Optional[Callable[[str], Any]] = pil_loader,
         is_valid_file: Optional[Callable[[str], bool]] = None,
     ) -> None:
-        """Initialize a new VisionClassificationDataset instance.
+        """VisionClassificationDatasetを初期化
+
         Args:
-            root: root directory where dataset can be found
-            transforms: a function/transform that takes input sample and its target as
-                entry and returns a transformed version
-            loader: a callable function which takes as input a path to an image and
-                returns a PIL Image or numpy array
-            is_valid_file: A function that takes the path of an Image file and checks if
-                the file is a valid file
+            root: データセットのルートディレクトリ
+            transforms: 入力サンプルとターゲットを変換する関数/変換
+            loader: 画像ファイルパスを受け取りPIL Imageまたはnumpy arrayを返す関数
+            is_valid_file: 画像ファイルパスを受け取り有効なファイルか判定する関数
         """
-        # When transform & target_transform are None, ImageFolder.__getitem__(index)
-        # returns a PIL.Image and int for image and label, respectively
         super().__init__(
             root=root,
             transform=None,
@@ -77,15 +92,16 @@ class VisionClassificationDataset(VisionDataset, ImageFolder):
             is_valid_file=is_valid_file,
         )
 
-        # Must be set after calling super().__init__()
         self.transforms = transforms
 
     def __getitem__(self, index: int) -> Dict[str, Tensor]:
-        """Return an index within the dataset.
+        """データセット内の指定インデックスのアイテムを返す
+
         Args:
-            index: index to return
+            index: 取得するアイテムのインデックス
+
         Returns:
-            data and label at that index
+            指定インデックスのデータとラベル
         """
         image, label = self._load_image(index)
 
@@ -95,19 +111,21 @@ class VisionClassificationDataset(VisionDataset, ImageFolder):
         return image, label
 
     def __len__(self) -> int:
-        """Return the number of data points in the dataset.
+        """データセットの画像数を返す
+
         Returns:
-            length of the dataset
+            データセットの長さ
         """
         return len(self.imgs)
 
     def _load_image(self, index: int) -> Tuple[Tensor, Tensor]:
-        """Load a single image and it"s class label.
+        """1つの画像とそのクラスラベルを読み込む
+
         Args:
-            index: index to return
+            index: 取得するアイテムのインデックス
+
         Returns:
-            the image
-            the image class label
+            画像とそのクラスラベル
         """
         img, label = ImageFolder.__getitem__(self, index)
         label = torch.tensor(label)
@@ -115,80 +133,23 @@ class VisionClassificationDataset(VisionDataset, ImageFolder):
 
 
 class RESISC45Dataset(VisionClassificationDataset):
-    """RESISC45 dataset.
-    The `RESISC45 <http://www.escience.cn/people/JunweiHan/NWPU-RESISC45.html>`_
-    dataset is a dataset for remote sensing image scene classification.
-    Dataset features:
-    * 31,500 images with 0.2-30 m per pixel resolution (256x256 px)
-    * three spectral bands - RGB
-    * 45 scene classes, 700 images per class
-    * images extracted from Google Earth from over 100 countries
-    * images conditions with high variability (resolution, weather, illumination)
-    Dataset format:
-    * images are three-channel jpgs
-    Dataset classes:
-    0. airplane
-    1. airport
-    2. baseball_diamond
-    3. basketball_court
-    4. beach
-    5. bridge
-    6. chaparral
-    7. church
-    8. circular_farmland
-    9. cloud
-    10. commercial_area
-    11. dense_residential
-    12. desert
-    13. forest
-    14. freeway
-    15. golf_course
-    16. ground_track_field
-    17. harbor
-    18. industrial_area
-    19. intersection
-    20. island
-    21. lake
-    22. meadow
-    23. medium_residential
-    24. mobile_home_park
-    25. mountain
-    26. overpass
-    27. palace
-    28. parking_lot
-    29. railway
-    30. railway_station
-    31. rectangular_farmland
-    32. river
-    33. roundabout
-    34. runway
-    35. sea_ice
-    36. ship
-    37. snowberg
-    38. sparse_residential
-    39. stadium
-    40. storage_tank
-    41. tennis_court
-    42. terrace
-    43. thermal_power_station
-    44. wetland
-    This dataset uses the train/val/test splits defined in the "In-domain representation
-    learning for remote sensing" paper:
-    * https://arxiv.org/abs/1911.06721
-    If you use this dataset in your research, please cite the following paper:
-    * https://doi.org/10.1109/jproc.2017.2675998
+    """RESISC45データセット
+
+    リモートセンシング画像シーン分類用のデータセット。
+    * 31,500枚の画像(解像度0.2-30m/pixel、256x256px)
+    * RGBの3チャンネル
+    * 45のシーンクラス、各クラス700枚
+    * 100カ国以上のGoogle Earth画像
+    * 解像度、天候、照明等の高い変動性
     """
 
-    # url = "https://drive.google.com/file/d/1DnPSU5nVSN7xv95bpZ3XQ0JhKXZOKgIv"
-    # md5 = "d824acb73957502b00efd559fc6cfbbb"
-    # filename = "NWPU-RESISC45.rar"
     directory = "resisc45/NWPU-RESISC45"
 
     splits = ["train", "val", "test"]
     split_urls = {
-        "train": "https://storage.googleapis.com/remote_sensing_representations/resisc45-train.txt",  # noqa: E501
-        "val": "https://storage.googleapis.com/remote_sensing_representations/resisc45-val.txt",  # noqa: E501
-        "test": "https://storage.googleapis.com/remote_sensing_representations/resisc45-test.txt",  # noqa: E501
+        "train": "https://storage.googleapis.com/remote_sensing_representations/resisc45-train.txt",
+        "val": "https://storage.googleapis.com/remote_sensing_representations/resisc45-val.txt",
+        "test": "https://storage.googleapis.com/remote_sensing_representations/resisc45-test.txt",
     }
     split_md5s = {
         "train": "b5a4c05a37de15e4ca886696a85c403e",
@@ -196,51 +157,16 @@ class RESISC45Dataset(VisionClassificationDataset):
         "test": "3dda9e4988b47eb1de9f07993653eb08",
     }
     classes = [
-        "airplane",
-        "airport",
-        "baseball_diamond",
-        "basketball_court",
-        "beach",
-        "bridge",
-        "chaparral",
-        "church",
-        "circular_farmland",
-        "cloud",
-        "commercial_area",
-        "dense_residential",
-        "desert",
-        "forest",
-        "freeway",
-        "golf_course",
-        "ground_track_field",
-        "harbor",
-        "industrial_area",
-        "intersection",
-        "island",
-        "lake",
-        "meadow",
-        "medium_residential",
-        "mobile_home_park",
-        "mountain",
-        "overpass",
-        "palace",
-        "parking_lot",
-        "railway",
-        "railway_station",
-        "rectangular_farmland",
-        "river",
-        "roundabout",
-        "runway",
-        "sea_ice",
-        "ship",
-        "snowberg",
-        "sparse_residential",
-        "stadium",
-        "storage_tank",
-        "tennis_court",
-        "terrace",
-        "thermal_power_station",
-        "wetland",
+        "airplane", "airport", "baseball_diamond", "basketball_court", "beach",
+        "bridge", "chaparral", "church", "circular_farmland", "cloud",
+        "commercial_area", "dense_residential", "desert", "forest", "freeway",
+        "golf_course", "ground_track_field", "harbor", "industrial_area",
+        "intersection", "island", "lake", "meadow", "medium_residential",
+        "mobile_home_park", "mountain", "overpass", "palace", "parking_lot",
+        "railway", "railway_station", "rectangular_farmland", "river",
+        "roundabout", "runway", "sea_ice", "ship", "snowberg",
+        "sparse_residential", "stadium", "storage_tank", "tennis_court",
+        "terrace", "thermal_power_station", "wetland",
     ]
 
     def __init__(
@@ -249,22 +175,22 @@ class RESISC45Dataset(VisionClassificationDataset):
         split: str = "train",
         transforms: Optional[Callable[[Dict[str, Tensor]], Dict[str, Tensor]]] = None,
     ) -> None:
-        """Initialize a new RESISC45 dataset instance.
+        """RESISC45Datasetを初期化
+
         Args:
-            root: root directory where dataset can be found
-            split: one of "train", "val", or "test"
-            transforms: a function/transform that takes input sample and its target as
-                entry and returns a transformed version
+            root: データセットのルートディレクトリ
+            split: "train"、"val"、"test"のいずれか
+            transforms: 入力サンプルとターゲットを変換する関数/変換
         """
         assert split in self.splits
         self.root = root
 
+        # 指定されたsplitに含まれるファイル名のセットを作成
         valid_fns = set()
         with open(os.path.join(self.root, "resisc45", f"resisc45-{split}.txt")) as f:
             for fn in f:
                 valid_fns.add(fn.strip())
-        is_in_split: Callable[[str], bool] = lambda x: os.path.basename(
-            x) in valid_fns
+        is_in_split: Callable[[str], bool] = lambda x: os.path.basename(x) in valid_fns
 
         super().__init__(
             root=os.path.join(root, self.directory),
@@ -274,41 +200,72 @@ class RESISC45Dataset(VisionClassificationDataset):
 
 
 class RESISC45:
-    def __init__(self,
-                 preprocess,
-                 location=os.path.expanduser("dataset"),
-                 batch_size=32,
-                 num_workers=4):
+    """RESISC45データセットのメインクラス
 
-        self.train_dataset = RESISC45Dataset(root=location, split="train", transforms=preprocess)
-        self.train_loader = torch.utils.data.DataLoader(
+    Attributes:
+        train_dataset: 学習用データセット
+        train_loader: 学習用データローダー
+        test_dataset: テスト用データセット
+        test_loader: テスト用データローダー
+        classnames: クラス名のリスト
+    """
+
+    def __init__(
+        self,
+        preprocess: Compose,
+        location: str = os.path.expanduser("dataset"),
+        batch_size: int = 32,
+        num_workers: int = 4
+    ) -> None:
+        """RESISC45を初期化
+
+        Args:
+            preprocess: 前処理関数
+            location: データセットのルートディレクトリ
+            batch_size: バッチサイズ
+            num_workers: データローダーの並列数
+        """
+        # 学習用データセットとローダーの設定
+        self.train_dataset = RESISC45Dataset(
+            root=location,
+            split="train",
+            transforms=preprocess
+        )
+        self.train_loader = DataLoader(
             self.train_dataset,
             shuffle=True,
             batch_size=batch_size,
             num_workers=num_workers,
         )
 
-        self.test_dataset = RESISC45Dataset(root=location, split="test", transforms=preprocess)
-        self.test_loader = torch.utils.data.DataLoader(
+        # テスト用データセットとローダーの設定
+        self.test_dataset = RESISC45Dataset(
+            root=location,
+            split="test",
+            transforms=preprocess
+        )
+        self.test_loader = DataLoader(
             self.test_dataset,
             batch_size=batch_size,
             num_workers=num_workers
         )
 
-        # class names have _ so split on this for better zero-shot head
+        # ゼロショット学習用にクラス名のアンダースコアをスペースに置換
         self.classnames = [" ".join(c.split("_")) for c in RESISC45Dataset.classes]
 
 
 if __name__ == "__main__":
-    # 動作検証
+    # 動作検証用コード
     import open_clip
 
     _, preprocess, _ = open_clip.create_model_and_transforms(
-        "ViT-B-32", "openai", cache_dir=".cache"
+        "ViT-B-32",
+        "openai",
+        cache_dir=".cache"
     )
 
     root = os.path.expanduser("dataset")
-    d = RESISC45(preprocess, location=root)
-    for i, (data, target) in enumerate(d.train_loader):
+    dataset = RESISC45(preprocess, location=root)
+    for i, (data, target) in enumerate(dataset.train_loader):
         print(data.shape, target)
         break

@@ -1,6 +1,18 @@
-# データセットのディレクトリをtrain, val(, test)に分割するスクリプト
-# Original Code:
-# https://github.com/mlfoundations/task_vectors/issues/1
+"""
+データセットを分割するモジュール
+
+データセットのディレクトリをtrain, val(, test)に分割するためのスクリプトを提供する。
+SUN397, EuroSAT, DTD, ImageNetの各データセットに対応している。
+
+Original Code:
+https://github.com/mlfoundations/task_vectors/issues/1
+
+Functions:
+    process_dataset: SUN397/DTDデータセットの画像を指定されたディレクトリにコピーする
+    create_directory_structure: EuroSATデータセットのディレクトリ構造を作成する
+    split_dataset: EuroSATデータセットをtrain, val, testに分割して保存する
+"""
+
 import glob
 import os
 import random
@@ -10,22 +22,21 @@ import scipy.io
 import tarfile
 
 
-base_dir = os.path.expanduser("~/dataset")  # 環境に合わせて変更する
+# データセットの保存先ディレクトリ(環境に合わせて変更する)
+base_dir = os.path.expanduser("~/dataset")
 
 
-# PROCESS SUN397 DATASET
 def process_dataset(
     txt_file: str | os.PathLike,
     downloaded_data_path: str | os.PathLike,
     output_folder: str | os.PathLike
 ) -> None:
-    """
-    SUN397データセットを処理して、指定されたフォルダに保存する
+    """SUN397データセットの画像を指定されたディレクトリにコピーする
 
     Args:
-        txt_file (str | os.PathLike): 分割を記述したテキストファイルのパス
-        downloaded_data_path (str | os.PathLike): ダウンロードしたデータセットのパス
-        output_folder (str | os.PathLike): 処理したデータセットを保存するフォルダのパス
+        txt_file: 画像パスが記載されたテキストファイルのパス
+        downloaded_data_path: ダウンロードしたデータセットのパス
+        output_folder: 出力先のディレクトリパス
     """
     with open(txt_file, 'r') as file:
         lines = file.readlines()
@@ -47,6 +58,7 @@ def process_dataset(
             print(f"Processed {i}/{len(lines)} images")
 
 
+# SUN397データセットの処理
 downloaded_data_path = f"{base_dir}/sun397"
 output_path = f"{base_dir}/sun397"
 
@@ -62,17 +74,15 @@ process_dataset(
 )
 
 
-# PROCESS EuroSAT_RGB DATASET
 def create_directory_structure(
     dst_dir: str | os.PathLike,
     classes: List[str]
 ) -> None:
-    """
-    EuroSATデータセットのディレクトリ構造を作成する
+    """EuroSATデータセットのディレクトリ構造を作成する
 
     Args:
-        dst_dir (str | os.PathLike): データセットの保存先ディレクトリ
-        classes (List[str]): クラス名のリスト
+        dst_dir: データセットの保存先ディレクトリ
+        classes: クラス名のリスト
     """
     for dataset in ['train', 'val', 'test']:
         path = os.path.join(dst_dir, dataset)
@@ -88,15 +98,14 @@ def split_dataset(
     val_size: int = 270,
     test_size: int = 270
 ) -> None:
-    """
-    EuroSATデータセットをtrain, val, testに分割して保存する
+    """EuroSATデータセットをtrain, val, testに分割して保存する
 
     Args:
-        dst_dir (str | os.PathLike): データセットの保存先ディレクトリ
-        src_dir (str | os.PathLike): データセットの元ディレクトリ
-        classes (List[str]): クラス名のリスト
-        val_size (int, optional): valデータのサイズ. Defaults to 270.
-        test_size (int, optional): testデータのサイズ. Defaults to 270.
+        dst_dir: データセットの保存先ディレクトリ
+        src_dir: データセットの元ディレクトリ
+        classes: クラス名のリスト
+        val_size: valデータのサイズ. Defaults to 270.
+        test_size: testデータのサイズ. Defaults to 270.
     """
     for cls in classes:
         class_path = os.path.join(src_dir, cls)
@@ -126,6 +135,7 @@ def split_dataset(
             shutil.copy(src_path, dst_path)
 
 
+# EuroSATデータセットの処理
 src_dir = f'{base_dir}/euro_sat/2750'
 dst_dir = f'{base_dir}/EuroSAT_splits'
 
@@ -137,19 +147,17 @@ create_directory_structure(dst_dir, classes)
 split_dataset(dst_dir, src_dir, classes)
 
 
-# PROCESS DTD DATASET
 def process_dataset(
     txt_file: str | os.PathLike,
     downloaded_data_path: str | os.PathLike,
     output_folder: str | os.PathLike
 ) -> None:
-    """
-    DTDデータセットを処理して、指定されたフォルダに保存する
+    """DTDデータセットを処理して、指定されたフォルダに保存する
 
     Args:
-        txt_file (str | os.PathLike): 分割を記述したテキストファイルのパス
-        downloaded_data_path (str | os.PathLike): ダウンロードしたデータセットのパス
-        output_folder (str | os.PathLike): 処理したデータセットを保存するフォルダのパス
+        txt_file: 分割を記述したテキストファイルのパス
+        downloaded_data_path: ダウンロードしたデータセットのパス
+        output_folder: 処理したデータセットを保存するフォルダのパス
     """
     with open(txt_file, 'r') as file:
         lines = file.readlines()
@@ -170,6 +178,7 @@ def process_dataset(
             print(f"Processed {i}/{len(lines)} images")
 
 
+# DTDデータセットの処理
 downloaded_data_path = f"{base_dir}/dtd/images"
 output_path = f"{base_dir}/dtd"
 
@@ -185,10 +194,11 @@ process_dataset(
 )
 
 
-# PROCESS ImageNet DATASET
+# ImageNetデータセットの処理
 # Original Code:
 # https://zenn.dev/hidetoshi/articles/20210717_pytorch_dataset_for_imagenet
-# process train dataset
+
+# trainデータセットの処理
 target_dir = f"{base_dir}/ILSVRC2012_img_train/"
 target_dir = shutil.move(target_dir, f"{base_dir}/imagenet/train")
 for tar_filepath in glob.glob(os.path.join(target_dir, "*.tar")):
@@ -199,7 +209,7 @@ for tar_filepath in glob.glob(os.path.join(target_dir, "*.tar")):
     os.remove(tar_filepath)
 os.remove(f"{base_dir}/ILSVRC2012_img_train.tar")
 
-# process val dataset
+# valデータセットの処理
 imagenet_val_tar_path = f"{base_dir}/ILSVRC2012_img_val.tar"
 target_dir = f"{base_dir}/imagenet/val_in_folder/"
 meta_path = f"{base_dir}/ILSVRC2012_devkit_t12/data/meta.mat"
@@ -231,6 +241,8 @@ with tarfile.open(imagenet_val_tar_path, "r") as tar:
         img = tar.extractfile(filename)
         with open(os.path.join(target_dir, wnid, filename), "wb") as f:
             f.write(img.read())
+
+# 不要なファイルの削除
 os.remove(f"{base_dir}/ILSVRC2012_img_val.tar")
 shutil.rmtree(f"{base_dir}/ILSVRC2012_devkit_t12")
 os.remove(f"{base_dir}/ILSVRC2012_devkit_t12.tar.gz")
