@@ -16,5 +16,6 @@
         "--max-line-length",
         "80"
     ],
-    "python.analysis.autoImportCompletions": false
+    "python.analysis.autoImportCompletions": false,
+    "github.copilot.chat.localeOverride": "ja"
 }

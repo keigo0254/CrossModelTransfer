@@ -8,13 +8,33 @@ import torchvision.transforms as transforms
 
 
 class gray_scale(object):
-    # グレースケール変換
-    def __init__(self, p: float = 0.2) -> None:
+    """
+    グレースケール変換
 
+    Attributes:
+        p (float): グレースケール変換を行う確率
+        transf (transforms.Grayscale): グレースケール変換を行う関数
+    """
+    def __init__(self, p: float = 0.2) -> None:
+        """
+        グレースケール変換を行う関数を初期化
+
+        Args:
+            p (float, optional): グレースケール変換を行う確率. Defaults to 0.2.
+        """
         self.p = p
         self.transf = transforms.Grayscale(3)
 
     def __call__(self, img: Image) -> Image:
+        """
+        グレースケール変換を行う
+
+        Args:
+            img (Image): 変換する画像
+
+        Returns:
+            Image: 変換後の画像
+        """
         if random.random() < self.p:
             return self.transf(img)
         else:
@@ -22,12 +42,34 @@ class gray_scale(object):
 
 
 class horizontal_flip(object):
-    # 左右反転
+    """
+    水平方向に反転する関数
+
+    Attributes:
+        p (float): 反転する確率
+        transf (transforms.RandomHorizontalFlip): 反転を行う関数
+    """
     def __init__(self, p: float = 0.2, activate_pred: bool = False) -> None:
+        """
+        水平方向に反転する関数を初期化
+
+        Args:
+            p (float, optional): 反転する確率. Defaults to 0.2.
+            activate_pred (bool, optional): 推論時にも反転するかどうか. Defaults to False.
+        """
         self.p = p
         self.transf = transforms.RandomHorizontalFlip(p=1.0)
 
     def __call__(self, img: Image) -> Image:
+        """
+        水平方向に反転する
+
+        Args:
+            img (Image): 変換する画像
+
+        Returns:
+            Image: 変換後の画像
+        """
         if random.random() < self.p:
             return self.transf(img)
         else:
@@ -35,11 +77,31 @@ class horizontal_flip(object):
 
 
 class Solarization(object):
-    # ソラリゼーション (閾値を超えたピクセルの値を反転)
+    """
+    ソラリゼーション
+
+    Attributes:
+        p (float): ソラリゼーションを行う確率
+    """
     def __init__(self, p: float = 0.2) -> None:
+        """
+        ソラリゼーションを行う関数を初期化
+
+        Args:
+            p (float, optional): ソラリゼーションを行う確率. Defaults to 0.2.
+        """
         self.p = p
 
     def __call__(self, img: Image) -> Image:
+        """
+        ソラリゼーションを行う
+
+        Args:
+            img (Image): 変換する画像
+
+        Returns:
+            Image: 変換後の画像
+        """
         if random.random() < self.p:
             return ImageOps.solarize(img)
         else:
@@ -47,13 +109,39 @@ class Solarization(object):
 
 
 class GaussianBlur(object):
-    # ガウシアンブラー
-    def __init__(self, p: float = 0.1, radius_min: float = 0.1, radius_max: float = 2.) -> None:
+    """
+    ガウシアンブラー
+
+    Attributes:
+        prob (float): ガウシアンブラーを行う確率
+        radius_min (float): ガウシアンブラーの最小半径
+        radius_max (float): ガウシアンブラーの最大半径
+    """
+    def __init__(
+        self, p: float = 0.1, radius_min: float = 0.1, radius_max: float = 2.
+    ) -> None:
+        """
+        ガウシアンブラーを行う関数を初期化
+
+        Args:
+            p (float, optional): ガウシアンブラーを行う確率. Defaults to 0.1.
+            radius_min (float, optional): ガウシアンブラーの最小半径. Defaults to 0.1.
+            radius_max (float, optional): ガウシアンブラーの最大半径. Defaults to 2.
+        """
         self.prob = p
         self.radius_min = radius_min
         self.radius_max = radius_max
 
     def __call__(self, img: Image) -> Image:
+        """
+        ガウシアンブラーを行う
+
+        Args:
+            img (Image): 変換する画像
+
+        Returns:
+            Image: 変換後の画像
+        """
         do_it = random.random() <= self.prob
         if not do_it:
             return img
@@ -70,7 +158,17 @@ def get_augmented_preprocess_fn(
     preprocess: transforms,
     p: float = 1.0
 ) -> transforms.Compose[List]:
-    # データ拡張を行う変換を返す関数
+    """
+    データ拡張を行う前処理関数を取得する
+
+    Args:
+        preprocess (transforms): ベースとなる前処理関数．\
+        open_clip.create_model_and_transformsで取得したものを指定する
+        p (float, optional): データ拡張を行う確率. Defaults to 1.0.
+
+    Returns:
+        transforms.Compose[List]: データ拡張を行う前処理関数
+    """
     mean = np.array(preprocess.transforms[3].mean)
     std = np.array(preprocess.transforms[3].std)
 

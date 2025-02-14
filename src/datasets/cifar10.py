@@ -1,5 +1,8 @@
+# CIFAR-10のデータセットを扱うためのクラスを定義
 import os
+from typing import Any, List, Tuple
 
+from PIL.Image import Image
 import numpy as np
 import torch
 import torchvision
@@ -12,17 +15,37 @@ cifar_classnames = ["airplane", "automobile", "bird",
 
 
 class CIFAR10:
-    def __init__(self, preprocess,
-                 location=os.path.expanduser("dataset"),
-                 batch_size=32,
-                 num_workers=4):
+    """
+    CIFAR-10データセットのラッパークラス
 
+    Attributes:
+        train_dataset (PyTorchCIFAR10): 学習用データセット
+        train_loader (torch.utils.data.DataLoader): 学習用データローダー
+        test_dataset (PyTorchCIFAR10): テスト用データセット
+        test_loader (torch.utils.data.DataLoader): テスト用データローダー
+        classnames (List[str]): クラス名のリスト
+    """
+    def __init__(self, preprocess: torchvision.transforms.Compose,
+                 location: str | os.PathLike = os.path.expanduser("dataset"),
+                 batch_size: int = 32,
+                 num_workers: int = 4) -> None:
+        """
+        CIFAR-10データセットを扱うクラスを初期化
+
+        Args:
+            preprocess (torchvision.transforms.Compose): 前処理関数
+            location (str | os.PathLike, optional): データセットの保存先ディレクトリ. \
+                Defaults to os.path.expanduser("dataset").
+            batch_size (int, optional): バッチサイズ. Defaults to 32.
+            num_workers (int, optional): データローダーの並列数. Defaults to 4.
+        """
         self.train_dataset = PyTorchCIFAR10(
             root=location, download=True, train=True, transform=preprocess
         )
 
         self.train_loader = torch.utils.data.DataLoader(
-            self.train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers
+            self.train_dataset, batch_size=batch_size,
+            shuffle=True, num_workers=num_workers
         )
 
         self.test_dataset = PyTorchCIFAR10(
@@ -30,20 +53,54 @@ class CIFAR10:
         )
 
         self.test_loader = torch.utils.data.DataLoader(
-            self.test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers
+            self.test_dataset, batch_size=batch_size,
+            shuffle=False, num_workers=num_workers
         )
 
         self.classnames = self.test_dataset.classes
 
 
-def convert(x):
+def convert(x: np.ndarray | Any) -> Image | Any:
+    """
+    numpy.ndarrayをPIL.Imageに変換する
+
+    Args:
+        x (np.ndarray | Any): 変換するデータ
+
+    Returns:
+        Image | Any: 変換後のデータ
+    """
     if isinstance(x, np.ndarray):
         return torchvision.transforms.functional.to_pil_image(x)
     return x
 
 
 class BasicVisionDataset(VisionDataset):
-    def __init__(self, images, targets, transform=None, target_transform=None):
+    """
+    画像分類のためのデータセットクラス(未使用)
+
+    Attributes:
+        images (List[np.ndarray | Any]): 画像データのリスト
+        targets (List[int]): ラベルのリスト
+    """
+    def __init__(
+        self,
+        images: List[np.ndarray | Any],
+        targets: List[int],
+        transform: torchvision.transforms.Compose = None,
+        target_transform: torchvision.transforms.Compose = None
+    ) -> None:
+        """
+        画像分類のためのデータセットクラスを初期化
+
+        Args:
+            images (List[np.ndarray  |  Any]): 画像データのリスト
+            targets (List[int]): ラベルのリスト
+            transform (torchvision.transforms.Compose, optional): 画像の変換関数. \
+                Defaults to None.
+            target_transform (torchvision.transforms.Compose, optional): \
+                ラベルの変換関数. Defaults to None.
+        """
         if transform is not None:
             transform.transforms.insert(0, convert)
         super(BasicVisionDataset, self).__init__(
@@ -53,10 +110,25 @@ class BasicVisionDataset(VisionDataset):
         self.images = images
         self.targets = targets
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, int]:
+        """
+        指定したインデックスのデータを取得
+
+        Args:
+            index (int): インデックス
+
+        Returns:
+            Tuple[torch.Tensor, int]: 画像データとラベル
+        """
         return self.transform(self.images[index]), self.targets[index]
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """
+        データセットのサイズを返す
+
+        Returns:
+            int: データセットのサイズ
+        """
         return len(self.targets)
 
 

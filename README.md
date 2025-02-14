@@ -1,34 +1,46 @@
 # Task Arithmetic [Ilharco+, [ICLR'23](https://openreview.net/forum?id=6t0Kwf8-jrj)]
 
-## Dataset
-1. [リンク](https://onedrive.live.com/?authkey=%21AHHNaHIlzp%5FIXjs&id=5C5E061130630A68%21107&cid=5C5E061130630A68&parId=root&parQt=sharedby&o=OneUp)からNWPU-RESISC45.rarをダウンロードし，/home/user/に置く．
-1. ImageNet-1kを[リンク](https://image-net.org/index.php)からダウンロードし，/home/user/dataset/に置き，解凍する．([参考](https://zenn.dev/hidetoshi/articles/20210703_how_to_download_imagenet))
+## リポジトリのクローン
+```code
+git clone https://github.com/kawakera-lab/TaskArithmetic.git    # HTTPS
+git clone git@github.com:kawakera-lab/TaskArithmetic.git        # SSH
+```
+
+## データセットのダウンロード
+- [RESISC45](https://onedrive.live.com/?authkey=%21AHHNaHIlzp%5FIXjs&id=5C5E061130630A68%21107&cid=5C5E061130630A68&parId=root&parQt=sharedby&o=OneUp): /home/user/にダウンロード．
+- [ImageNet-1k](https://image-net.org/index.php): /home/user/dataset/にダウンロード&解凍．
     ```code
     cd /home/user/dataset
     mkdir ILSVRC2012_img_train
     tar -xvf ILSVRC2012_img_train.tar -C ILSVRC2012_img_train/
     tar -zxvf ILSVRC2012_devkit_t12.tar.gz
     ```
-1. download_sample.shの内容を各自の環境に合わせて変更し，実行する．**APIキーを公開しないようにすること！！！**
-1. データセットを分割するために，split_dataset.pyを実行する．
-
-## Environment
-1. モデルを保存する用のディレクトリmodelを/home/user/に作成する．
-1. Dockerイメージを作成し，コンテナに入る．
+- Stanford Cars, DTD, EuroSAT, SUN397: download_sample.shを実行．ただし，各自のKaggle APIキーを入力し，ファイル名をdownload.shにしてから実行すること．
     ```code
-    bash docker.sh build            # イメージの作成
-    bash docker.sh shell            # コンテナの作成，コンテナに入る
-    exit                            # コンテナから出る
-    docker start <container_name>   # コンテナを起動
-    docker attach <container_name>  # コンテナに入る
-    docker stop <container_name>    # コンテナを止める
+    bash download.sh
+    ```
+- データセットのディレクトリ構造を整える．
+    ```code
+    cd ~/TaskArithmetic         # リポジトリのディレクトリに移動
+    python split_dataset.py     # 人によってはpython3 split_dataset.pyを実行する
     ```
 
-## Fine-Tuning
-cmd/finetune.sh内の変数を適宜書き換えてから実行してください．
+## 環境構築
+誰でも実験を再現できるように，Dockerを用いて環境構築を行う．
 ```code
-bash cmd/finetune.sh
-nohup bash cmd/finetune.sh > log/finetune.log &     # バックグラウンド実行&ログの保存
+cd ~/TaskArithmetic
+bash docker.sh build    # イメージの作成，初回のみ
+bash docker.sh shell    # コンテナの起動
+```
+### Dockerの操作
+```code
+docker ps       # コンテナの一覧
+docker ps -a    # コンテナの一覧（停止中のものも含む）
+docker start <container_id>     # コンテナの起動
+docker attach <container_id>    # コンテナに入る
+docker stop <container_id>      # コンテナの停止
+docker rm <container_id>        # コンテナの削除
+docker rmi <image_id>           # イメージの削除
 ```
 
 ## Original Codes

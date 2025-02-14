@@ -1,11 +1,22 @@
+# EuroSATのデータセットを扱うためのクラス
 import os
 import re
 
 import torch
+import torchvision
 import torchvision.datasets as datasets
 
 
-def pretify_classname(classname):
+def pretify_classname(classname: str) -> str:
+    """
+    クラス名を見やすくする
+
+    Args:
+        classname (str): クラス名
+
+    Returns:
+        str: 見やすくしたクラス名
+    """
     words = re.findall(r"[A-Z](?:[a-z]+|[A-Z]*(?=[A-Z]|$))", classname)
     words = [i.lower() for i in words]
     out = " ".join(words)
@@ -15,17 +26,42 @@ def pretify_classname(classname):
 
 
 class EuroSATBase:
-    def __init__(self,
-                 preprocess,
-                 test_split,
-                 location=os.path.expanduser("dataset"),
-                 batch_size=32,
-                 num_workers=4):
+    """
+    EuroSATデータセットを扱うためのラッパークラス
+
+    Attributes:
+        train_dataset (datasets.ImageFolder): 学習用データセット
+        train_loader (torch.utils.data.DataLoader): 学習用データローダー
+        test_dataset (datasets.ImageFolder): テスト用データセット
+        test_loader (torch.utils.data.DataLoader): テスト用データローダー
+        classnames (List[str]): クラス名のリスト
+    """
+    def __init__(
+        self,
+        preprocess: torchvision.transforms.Compose,
+        test_split: str,
+        location: str | os.PathLike = os.path.expanduser("dataset"),
+        batch_size: int = 32,
+        num_workers: int = 4
+    ) -> None:
+        """
+        EuroSATデータセットを扱うクラスを初期化
+
+        Args:
+            preprocess (torchvision.transforms.Compose): 前処理関数
+            test_split (str): テストデータの分割名
+            location (str | os.PathLike, optional): データセットの保存先ディレクトリ. \
+                Defaults to os.path.expanduser("dataset").
+            batch_size (int, optional): バッチサイズ. Defaults to 32.
+            num_workers (int, optional): データローダーの並列数. Defaults to 4.
+        """
         # Data loading code
         traindir = os.path.join(location, "EuroSAT_splits", "train")
         testdir = os.path.join(location, "EuroSAT_splits", test_split)
 
-        self.train_dataset = datasets.ImageFolder(traindir, transform=preprocess)
+        self.train_dataset = datasets.ImageFolder(
+            traindir, transform=preprocess
+        )
         self.train_loader = torch.utils.data.DataLoader(
             self.train_dataset,
             shuffle=True,
@@ -33,16 +69,24 @@ class EuroSATBase:
             num_workers=num_workers,
         )
 
-        self.test_dataset = datasets.ImageFolder(testdir, transform=preprocess)
+        self.test_dataset = datasets.ImageFolder(
+            testdir, transform=preprocess
+        )
         self.test_loader = torch.utils.data.DataLoader(
             self.test_dataset,
             batch_size=batch_size,
             num_workers=num_workers
         )
-        idx_to_class = dict((v, k)
-                            for k, v in self.train_dataset.class_to_idx.items())
-        self.classnames = [idx_to_class[i].replace("_", " ") for i in range(len(idx_to_class))]
-        self.classnames = [pretify_classname(c) for c in self.classnames]
+        idx_to_class = dict(
+            (v, k) for k, v in self.train_dataset.class_to_idx.items()
+        )
+        self.classnames = [
+            idx_to_class[i].replace("_", " ")
+            for i in range(len(idx_to_class))
+        ]
+        self.classnames = [
+            pretify_classname(c) for c in self.classnames
+        ]
         ours_to_open_ai = {
             "annual crop": "annual crop land",
             "forest": "forest",
@@ -60,21 +104,61 @@ class EuroSATBase:
 
 
 class EuroSAT(EuroSATBase):
-    def __init__(self,
-                 preprocess,
-                 location=os.path.expanduser("dataset"),
-                 batch_size=32,
-                 num_workers=4):
-        super().__init__(preprocess, "test", location, batch_size, num_workers)
+    """
+    EuroSATデータセットを扱うためのラッパークラス
+
+    Attributes:
+        train_dataset (datasets.ImageFolder): 学習用データセット
+        train_loader (torch.utils.data.DataLoader): 学習用データローダー
+        test_dataset (datasets.ImageFolder): テスト用データセット
+        test_loader (torch.utils.data.DataLoader): テスト用データローダー
+        classnames (List[str]): クラス名のリスト
+    """
+    def __init__(
+        self,
+        preprocess: torchvision.transforms.Compose,
+        location: str | os.PathLike = os.path.expanduser("dataset"),
+        batch_size: int = 32,
+        num_workers: int = 4
+    ) -> None:
+        """
+        EuroSATデータセットを扱うクラスを初期化
+
+        Args:
+            preprocess (torchvision.transforms.Compose): 前処理関数
+            location (str | os.PathLike, optional): データセットの保存先ディレクトリ. \
+                Defaults to os.path.expanduser("dataset").
+            batch_size (int, optional): バッチサイズ. Defaults to 32.
+            num_workers (int, optional): データローダーの並列数. Defaults to 4.
+        """
+        super().__init__(
+            preprocess, "test",
+            location, batch_size, num_workers
+        )
 
 
 class EuroSATVal(EuroSATBase):
-    def __init__(self,
-                 preprocess,
-                 location=os.path.expanduser("dataset"),
-                 batch_size=32,
-                 num_workers=4):
-        super().__init__(preprocess, "val", location, batch_size, num_workers)
+    """
+    EuroSATデータセットを扱うためのラッパークラス
+
+    Attributes:
+        train_dataset (datasets.ImageFolder): 学習用データセット
+        train_loader (torch.utils.data.DataLoader): 学習用データローダー
+        test_dataset (datasets.ImageFolder): テスト用データセット
+        test_loader (torch.utils.data.DataLoader): テスト用データローダー
+        classnames (List[str]): クラス名のリスト
+    """
+    def __init__(
+        self,
+        preprocess: torchvision.transforms.Compose,
+        location: str | os.PathLike = os.path.expanduser("dataset"),
+        batch_size: int = 32,
+        num_workers: int = 4
+    ) -> None:
+        super().__init__(
+            preprocess, "val",
+            location, batch_size, num_workers
+        )
 
 
 if __name__ == "__main__":

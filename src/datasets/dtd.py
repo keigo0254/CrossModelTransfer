@@ -1,15 +1,39 @@
+# DTDのデータセットを扱うためのクラス
 import os
 
 import torch
+import torchvision
 import torchvision.datasets as datasets
 
 
 class DTD:
-    def __init__(self,
-                 preprocess,
-                 location=os.path.expanduser("dataset"),
-                 batch_size=32,
-                 num_workers=4):
+    """
+    DTDのデータセットを扱うためのラッパークラス
+
+    Attributes:
+        train_dataset (datasets.ImageFolder): 学習用データセット
+        train_loader (torch.utils.data.DataLoader): 学習用データローダー
+        test_dataset (datasets.ImageFolder): テスト用データセット
+        test_loader (torch.utils.data.DataLoader): テスト用データローダー
+        classnames (List[str]): クラス名のリスト
+    """
+    def __init__(
+        self,
+        preprocess: torchvision.transforms.Compose,
+        location: str | os.PathLike = os.path.expanduser("dataset"),
+        batch_size: int = 32,
+        num_workers: int = 4
+    ) -> None:
+        """
+        DTDのデータセットを扱うクラスを初期化
+
+        Args:
+            preprocess (torchvision.transforms.Compose): 前処理関数
+            location (str | os.PathLike, optional): データセットの保存先ディレクトリ. \
+                Defaults to os.path.expanduser("dataset").
+            batch_size (int, optional): バッチサイズ. Defaults to 32.
+            num_workers (int, optional): データローダーの並列数. Defaults to 4.
+        """
         # Data loading code
         traindir = os.path.join(location, "dtd", "train")
         valdir = os.path.join(location, "dtd", "val")

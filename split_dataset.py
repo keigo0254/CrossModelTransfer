@@ -1,4 +1,4 @@
-# データセットのディレクトリを整理する
+# データセットのディレクトリをtrain, val(, test)に分割するスクリプト
 # Original Code:
 # https://github.com/mlfoundations/task_vectors/issues/1
 import glob
@@ -10,7 +10,7 @@ import scipy.io
 import tarfile
 
 
-base_dir = os.path.expanduser("~/dataset")
+base_dir = os.path.expanduser("~/dataset")  # 環境に合わせて変更する
 
 
 # PROCESS SUN397 DATASET
@@ -19,6 +19,14 @@ def process_dataset(
     downloaded_data_path: str | os.PathLike,
     output_folder: str | os.PathLike
 ) -> None:
+    """
+    SUN397データセットを処理して、指定されたフォルダに保存する
+
+    Args:
+        txt_file (str | os.PathLike): 分割を記述したテキストファイルのパス
+        downloaded_data_path (str | os.PathLike): ダウンロードしたデータセットのパス
+        output_folder (str | os.PathLike): 処理したデータセットを保存するフォルダのパス
+    """
     with open(txt_file, 'r') as file:
         lines = file.readlines()
 
@@ -59,6 +67,13 @@ def create_directory_structure(
     dst_dir: str | os.PathLike,
     classes: List[str]
 ) -> None:
+    """
+    EuroSATデータセットのディレクトリ構造を作成する
+
+    Args:
+        dst_dir (str | os.PathLike): データセットの保存先ディレクトリ
+        classes (List[str]): クラス名のリスト
+    """
     for dataset in ['train', 'val', 'test']:
         path = os.path.join(dst_dir, dataset)
         os.makedirs(path, exist_ok=True)
@@ -73,6 +88,16 @@ def split_dataset(
     val_size: int = 270,
     test_size: int = 270
 ) -> None:
+    """
+    EuroSATデータセットをtrain, val, testに分割して保存する
+
+    Args:
+        dst_dir (str | os.PathLike): データセットの保存先ディレクトリ
+        src_dir (str | os.PathLike): データセットの元ディレクトリ
+        classes (List[str]): クラス名のリスト
+        val_size (int, optional): valデータのサイズ. Defaults to 270.
+        test_size (int, optional): testデータのサイズ. Defaults to 270.
+    """
     for cls in classes:
         class_path = os.path.join(src_dir, cls)
         images = os.listdir(class_path)
@@ -118,6 +143,14 @@ def process_dataset(
     downloaded_data_path: str | os.PathLike,
     output_folder: str | os.PathLike
 ) -> None:
+    """
+    DTDデータセットを処理して、指定されたフォルダに保存する
+
+    Args:
+        txt_file (str | os.PathLike): 分割を記述したテキストファイルのパス
+        downloaded_data_path (str | os.PathLike): ダウンロードしたデータセットのパス
+        output_folder (str | os.PathLike): 処理したデータセットを保存するフォルダのパス
+    """
     with open(txt_file, 'r') as file:
         lines = file.readlines()
 
