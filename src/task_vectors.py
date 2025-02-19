@@ -73,9 +73,11 @@ class TaskVector:
         print(f'Saving task vector to {path}')
         torch_save(self.vector, path)
 
-    def load_vector(self, path: str) -> None:
+    @classmethod
+    def load_vector(cls, path: str) -> 'TaskVector':
         print(f'Loading task vector from {path}')
-        self.vector = torch_load(path)
+        vector = torch_load(path)
+        return cls(vector=vector)
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 
 class LoRALayer(nn.Module):
+    """LoRA or Linear layer with additional weight"""
     def __init__(
         self,
         in_features: int,
@@ -13,7 +14,6 @@ class LoRALayer(nn.Module):
         alpha: int = 0,
         bias: bool = True,
     ):
-        """LoRA or Linear layer with additional weight"""
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -53,6 +53,10 @@ class LoRALayer(nn.Module):
             if self.bias:
                 nn.init.zeros_(self.b)
 
+    def randomize(self):
+        nn.init.kaiming_uniform_(self.U, a=math.sqrt(5))
+        self.qr()
+
     @torch.no_grad()
     def qr(self):
         Q, R = torch.linalg.qr(self.U)
@@ -72,6 +76,7 @@ class LoRALayer(nn.Module):
 
 
 class Linear(nn.Linear):
+    """A wrapper class that implements either a LoRA or standard Linear layer, primarily designed for use in MultiheadAttention"""
     def __init__(
         self,
         in_features: int,
@@ -81,7 +86,6 @@ class Linear(nn.Linear):
         weight: torch.Tensor = None,
         bias: torch.Tensor = None,
     ):
-        """Wrapper class with LoRA or Linear layer for MultiheadAttention"""
         self.r = r
         self.alpha = alpha
 
