@@ -66,7 +66,7 @@ def get_classification_head(args: Args, dataset: str) -> nn.Module:
     filename = os.path.join(
         args.model_root,
         args.model_architecture,
-        args.base_pretrained,
+        args.pretrained,
         "heads",
         f"head_for_{dataset}.pt"
     )

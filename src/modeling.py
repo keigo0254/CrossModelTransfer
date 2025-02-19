@@ -52,28 +52,28 @@ class MultiheadAttention(nn.Module):
         if "q" in enable_lora:
             self.q_proj = Linear(embed_dim, embed_dim, r=r, alpha=lora_alpha, weight=q_weight, bias=q_bias)
         else:
-            self.q_proj = nn.Linear(embed_dim, embed_dim, bias=True if q_bias is not None else False)
+            self.q_proj = nn.Linear(embed_dim, embed_dim, bias=True)
             self.q_proj.weight = q_weight
             if q_bias is not None:
                 self.q_proj.bias = q_bias
         if "k" in enable_lora:
             self.k_proj = Linear(embed_dim, embed_dim, r=r, alpha=lora_alpha, weight=k_weight, bias=k_bias)
         else:
-            self.k_proj = nn.Linear(embed_dim, embed_dim, bias=True if k_bias is not None else False)
+            self.k_proj = nn.Linear(embed_dim, embed_dim, bias=True)
             self.k_proj.weight = k_weight
             if k_bias is not None:
                 self.k_proj.bias = k_bias
         if "v" in enable_lora:
             self.v_proj = Linear(embed_dim, embed_dim, r=r, alpha=lora_alpha, weight=v_weight, bias=v_bias)
         else:
-            self.v_proj = nn.Linear(embed_dim, embed_dim, bias=True if v_bias is not None else False)
+            self.v_proj = nn.Linear(embed_dim, embed_dim, bias=True)
             self.v_proj.weight = v_weight
             if v_bias is not None:
                 self.v_proj.bias = v_bias
         if "o" in enable_lora:
             self.out_proj = Linear(embed_dim, embed_dim, r=r, alpha=lora_alpha, weight=out_weight, bias=out_bias)
         else:
-            self.out_proj = nn.Linear(embed_dim, embed_dim, bias=True if out_bias is not None else False)
+            self.out_proj = nn.Linear(embed_dim, embed_dim, bias=True)
             self.out_proj.weight = out_weight
             if out_bias is not None:
                 self.out_proj.bias = out_bias
@@ -176,8 +176,6 @@ class ImageEncoder(nn.Module):
             )
         )
 
-        self.args = args
-
         if not keep_lang and hasattr(self.model, "transformer"):
             delattr(self.model, "transformer")
 
@@ -193,9 +191,28 @@ class ImageEncoder(nn.Module):
                         module.num_heads,
                         r=args.rank,
                         lora_alpha=args.alpha,
+                        dropout=args.dropout,
                         original_mha=module
                     )
                 )
+
+        self.freeze_pretrained_weight(args.finetuning_type)
+
+    def freeze_pretrained_weight(self, finetuning_type: str = "full"):
+        for name, param in self.named_parameters():
+            if "Delta.D" in name or "Delta.A" in name or "Delta.B" in name:
+                param.requires_grad_(True)
+            elif "Delta.b" in name and finetuning_type == "full":
+                param.requires_grad_(True)
+            else:
+                param.requires_grad_(False)
+
+    def freeze_except_U(self):
+        for name, param in self.named_parameters():
+            if "Delta.U" in name:
+                param.requires_grad_(True)
+            else:
+                param.requires_grad_(False)
 
     def forward(self, images):
         assert self.model is not None
@@ -346,18 +363,19 @@ if __name__ == '__main__':
         "MNIST", "RESISC45", "SUN397", "SVHN",
         "CIFAR10", "CIFAR100", "ImageNet", "STL10"
     ]
+    args.finetuning_type = "linear"
     args.rank = 0
     args.alpha = 8
     image_encoder = ImageEncoder(args, keep_lang=False)
     for name, param in image_encoder.named_parameters():
-        print(name, param.shape)
+        print(name, param.requires_grad)
 
-    evaluate(image_encoder, args)
+    # evaluate(image_encoder, args)
 
-    classification_heads = {}
-    for dataset in args.eval_datasets:
-        classification_head = get_classification_head(args, dataset)
-        classification_heads[dataset] = classification_head
+    # classification_heads = {}
+    # for dataset in args.eval_datasets:
+    #     classification_head = get_classification_head(args, dataset)
+    #     classification_heads[dataset] = classification_head
 
-    multi_head_image_classifier = MultiHeadImageClassifier(image_encoder, classification_heads)
-    eval_multihead_classifier(multi_head_image_classifier, args)
+    # multi_head_image_classifier = MultiHeadImageClassifier(image_encoder, classification_heads)
+    # eval_multihead_classifier(multi_head_image_classifier, args)

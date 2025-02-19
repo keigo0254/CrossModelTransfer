@@ -10,8 +10,8 @@ class LoRALayer(nn.Module):
         in_features: int,
         out_features: int,
         r: int = 0,
-        alpha: int = 1,
-        bias: bool = False,
+        alpha: int = 0,
+        bias: bool = True,
     ):
         """LoRA or Linear layer with additional weight"""
         super().__init__()
@@ -30,8 +30,8 @@ class LoRALayer(nn.Module):
             nn.init.zeros_(self.D)
 
             if bias:
-                self.bias = nn.Parameter(torch.zeros(out_features))
-                nn.init.zeros_(self.bias)
+                self.b = nn.Parameter(torch.zeros(out_features))
+                nn.init.zeros_(self.b)
 
         self.U = nn.Parameter(torch.eye(in_features))
 
@@ -42,7 +42,7 @@ class LoRALayer(nn.Module):
         else:
             nn.init.zeros_(self.D)
             if self.bias:
-                nn.init.zeros_(self.bias)
+                nn.init.zeros_(self.b)
 
     def zero_parameters(self):
         if self.r > 0:
@@ -51,7 +51,7 @@ class LoRALayer(nn.Module):
         else:
             nn.init.zeros_(self.D)
             if self.bias:
-                nn.init.zeros_(self.bias)
+                nn.init.zeros_(self.b)
 
     @torch.no_grad()
     def qr(self):
@@ -63,7 +63,7 @@ class LoRALayer(nn.Module):
             return F.linear(inputs, self.U.T @ self.B @ self.A @ self.U) * self.alpha / self.r
         else:
             if self.bias:
-                return F.linear(inputs, self.U.T @ self.D @ self.U, self.bias)
+                return F.linear(inputs, self.U.T @ self.D @ self.U, self.b)
             else:
                 return F.linear(inputs, self.U.T @ self.D @ self.U)
 
@@ -77,7 +77,7 @@ class Linear(nn.Linear):
         in_features: int,
         out_features: int,
         r: int = 0,
-        alpha: int = 1,
+        alpha: int = 0,
         weight: torch.Tensor = None,
         bias: torch.Tensor = None,
     ):

@@ -95,18 +95,19 @@ class Args:
         help="Gradient accumulation steps"
     )
     world_size: int = config(default=1, help="World size")
+    port: int = config(default=12355, help="Port")
 
     # Model specific parameters
-    rank: int = config(default=0, help="Matrix Rank")
+    rank: int = config(default=0, help="Matrix Rank for LoRA")
     alpha: int = config(
-        default=1,
+        default=0,
         help="Scaling Coefficient for LoRA"
     )
     lamb: float = config(
         default=None,
         help="Scaling coefficient for task arithmetic"
     )
-    dropout: float = config(default=None, help="Dropout Rate")
+    dropout: float = config(default=0.0, help="Dropout Rate")
 
     # Data related parameters
     num_images: int = config(default=None, help="Number of images")
