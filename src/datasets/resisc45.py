@@ -1,14 +1,3 @@
-"""RESISC45データセットを扱うモジュール
-
-RESISC45データセットを読み込み、前処理を行うためのクラスを提供する。
-
-Classes:
-    VisionDataset: 基本的な画像データセットの抽象基底クラス
-    VisionClassificationDataset: 画像分類データセットの抽象基底クラス
-    RESISC45Dataset: RESISC45データセットのラッパークラス
-    RESISC45: RESISC45データセットのメインクラス
-"""
-
 import abc
 import os
 from typing import Any, Callable, Dict, Optional, Tuple
@@ -22,40 +11,15 @@ from torchvision.transforms import Compose
 
 
 class VisionDataset(Dataset[Dict[str, Any]], abc.ABC):
-    """基本的な画像データセットの抽象基底クラス
-
-    地理空間情報を持たないデータセット向けの基底クラス。
-    事前に定義された画像チップを持つデータセット用に設計。
-    """
-
     @abc.abstractmethod
     def __getitem__(self, index: int) -> Dict[str, Any]:
-        """データセット内の指定インデックスのアイテムを返す
-
-        Args:
-            index: 取得するアイテムのインデックス
-
-        Returns:
-            指定インデックスのデータとラベル
-
-        Raises:
-            IndexError: インデックスが範囲外の場合
-        """
+        pass
 
     @abc.abstractmethod
     def __len__(self) -> int:
-        """データセットの長さを返す
-
-        Returns:
-            データセットの長さ
-        """
+        pass
 
     def __str__(self) -> str:
-        """オブジェクトの非公式な文字列表現を返す
-
-        Returns:
-            非公式な文字列表現
-        """
         return f"""\
 {self.__class__.__name__} Dataset
     type: VisionDataset
@@ -63,12 +27,6 @@ class VisionDataset(Dataset[Dict[str, Any]], abc.ABC):
 
 
 class VisionClassificationDataset(VisionDataset, ImageFolder):
-    """画像分類データセットの抽象基底クラス
-
-    地理空間情報を持たない分類データセット向けの基底クラス。
-    クラスごとに別フォルダに分けられた事前定義の画像チップを持つデータセット用。
-    """
-
     def __init__(
         self,
         root: str,
@@ -76,14 +34,6 @@ class VisionClassificationDataset(VisionDataset, ImageFolder):
         loader: Optional[Callable[[str], Any]] = pil_loader,
         is_valid_file: Optional[Callable[[str], bool]] = None,
     ) -> None:
-        """VisionClassificationDatasetを初期化
-
-        Args:
-            root: データセットのルートディレクトリ
-            transforms: 入力サンプルとターゲットを変換する関数/変換
-            loader: 画像ファイルパスを受け取りPIL Imageまたはnumpy arrayを返す関数
-            is_valid_file: 画像ファイルパスを受け取り有効なファイルか判定する関数
-        """
         super().__init__(
             root=root,
             transform=None,
@@ -95,14 +45,6 @@ class VisionClassificationDataset(VisionDataset, ImageFolder):
         self.transforms = transforms
 
     def __getitem__(self, index: int) -> Dict[str, Tensor]:
-        """データセット内の指定インデックスのアイテムを返す
-
-        Args:
-            index: 取得するアイテムのインデックス
-
-        Returns:
-            指定インデックスのデータとラベル
-        """
         image, label = self._load_image(index)
 
         if self.transforms is not None:
@@ -111,38 +53,15 @@ class VisionClassificationDataset(VisionDataset, ImageFolder):
         return image, label
 
     def __len__(self) -> int:
-        """データセットの画像数を返す
-
-        Returns:
-            データセットの長さ
-        """
         return len(self.imgs)
 
     def _load_image(self, index: int) -> Tuple[Tensor, Tensor]:
-        """1つの画像とそのクラスラベルを読み込む
-
-        Args:
-            index: 取得するアイテムのインデックス
-
-        Returns:
-            画像とそのクラスラベル
-        """
         img, label = ImageFolder.__getitem__(self, index)
         label = torch.tensor(label)
         return img, label
 
 
 class RESISC45Dataset(VisionClassificationDataset):
-    """RESISC45データセット
-
-    リモートセンシング画像シーン分類用のデータセット。
-    * 31,500枚の画像(解像度0.2-30m/pixel、256x256px)
-    * RGBの3チャンネル
-    * 45のシーンクラス、各クラス700枚
-    * 100カ国以上のGoogle Earth画像
-    * 解像度、天候、照明等の高い変動性
-    """
-
     directory = "resisc45/NWPU-RESISC45"
 
     splits = ["train", "val", "test"]
@@ -175,17 +94,9 @@ class RESISC45Dataset(VisionClassificationDataset):
         split: str = "train",
         transforms: Optional[Callable[[Dict[str, Tensor]], Dict[str, Tensor]]] = None,
     ) -> None:
-        """RESISC45Datasetを初期化
-
-        Args:
-            root: データセットのルートディレクトリ
-            split: "train"、"val"、"test"のいずれか
-            transforms: 入力サンプルとターゲットを変換する関数/変換
-        """
         assert split in self.splits
         self.root = root
 
-        # 指定されたsplitに含まれるファイル名のセットを作成
         valid_fns = set()
         with open(os.path.join(self.root, "resisc45", f"resisc45-{split}.txt")) as f:
             for fn in f:
@@ -200,16 +111,6 @@ class RESISC45Dataset(VisionClassificationDataset):
 
 
 class RESISC45:
-    """RESISC45データセットのメインクラス
-
-    Attributes:
-        train_dataset: 学習用データセット
-        train_loader: 学習用データローダー
-        test_dataset: テスト用データセット
-        test_loader: テスト用データローダー
-        classnames: クラス名のリスト
-    """
-
     def __init__(
         self,
         preprocess: Compose,
@@ -217,15 +118,6 @@ class RESISC45:
         batch_size: int = 32,
         num_workers: int = 4
     ) -> None:
-        """RESISC45を初期化
-
-        Args:
-            preprocess: 前処理関数
-            location: データセットのルートディレクトリ
-            batch_size: バッチサイズ
-            num_workers: データローダーの並列数
-        """
-        # 学習用データセットとローダーの設定
         self.train_dataset = RESISC45Dataset(
             root=location,
             split="train",
@@ -238,7 +130,6 @@ class RESISC45:
             num_workers=num_workers,
         )
 
-        # テスト用データセットとローダーの設定
         self.test_dataset = RESISC45Dataset(
             root=location,
             split="test",
@@ -250,12 +141,10 @@ class RESISC45:
             num_workers=num_workers
         )
 
-        # ゼロショット学習用にクラス名のアンダースコアをスペースに置換
         self.classnames = [" ".join(c.split("_")) for c in RESISC45Dataset.classes]
 
 
 if __name__ == "__main__":
-    # 動作検証用コード
     import open_clip
 
     _, preprocess, _ = open_clip.create_model_and_transforms(

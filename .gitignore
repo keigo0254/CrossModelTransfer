@@ -1,8 +1,9 @@
 .cache
+.cursorrules
 .env
+.vscode
 download.sh
 fig
 log
-pre-src
 result
 wandb

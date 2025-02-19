@@ -1,11 +1,3 @@
-"""SUN397データセットを扱うモジュール
-
-SUN397データセットを読み込み、前処理を行うためのクラスを提供する。
-
-Classes:
-    SUN397: SUN397データセットのラッパークラス
-"""
-
 import os
 from typing import List
 
@@ -16,16 +8,6 @@ from torch.utils.data import DataLoader
 
 
 class SUN397:
-    """SUN397データセットのラッパークラス
-
-    Attributes:
-        train_dataset: 学習用データセット
-        train_loader: 学習用データローダー
-        test_dataset: テスト用データセット
-        test_loader: テスト用データローダー
-        classnames: クラス名のリスト
-    """
-
     def __init__(
         self,
         preprocess: transforms.Compose,
@@ -33,20 +15,9 @@ class SUN397:
         batch_size: int = 32,
         num_workers: int = 4
     ) -> None:
-        """SUN397データセットのラッパークラスを初期化
-
-        Args:
-            preprocess: 前処理関数
-            location: データセットのルートディレクトリ.
-                Defaults to os.path.expanduser("dataset").
-            batch_size: バッチサイズ. Defaults to 32.
-            num_workers: データローダーの並列数. Defaults to 4.
-        """
-        # データセットのパスを設定
         traindir = os.path.join(location, "sun397", "train")
         valdir = os.path.join(location, "sun397", "val")
 
-        # 学習用データセットの設定
         self.train_dataset: datasets.ImageFolder = datasets.ImageFolder(
             traindir,
             transform=preprocess
@@ -58,7 +29,6 @@ class SUN397:
             num_workers=num_workers
         )
 
-        # テスト用データセットの設定
         self.test_dataset: datasets.ImageFolder = datasets.ImageFolder(
             valdir,
             transform=preprocess
@@ -69,7 +39,6 @@ class SUN397:
             num_workers=num_workers
         )
 
-        # クラス名の設定
         idx_to_class = {v: k for k, v in self.train_dataset.class_to_idx.items()}
         self.classnames: List[str] = [
             idx_to_class[i][2:].replace("_", " ")
@@ -78,7 +47,6 @@ class SUN397:
 
 
 if __name__ == "__main__":
-    # 動作検証用コード
     import open_clip
 
     _, preprocess, _ = open_clip.create_model_and_transforms(

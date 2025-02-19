@@ -1,14 +1,7 @@
-"""データセットごとのテンプレートを定義するモジュール
-
-各データセットのクラス名をテキストプロンプトに変換するためのテンプレートを提供する。
-
-テンプレートは、クラス名を受け取り、プロンプト文字列を返すラムダ関数のリストとして定義される。
-"""
-
 from typing import Callable, Dict, List
 
 
-# 車の画像データセット用テンプレート
+# Templates for car image dataset
 cars_template: List[Callable[[str], str]] = [
     lambda c: f"a photo of a {c}.",
     lambda c: f"a photo of the {c}.",
@@ -20,7 +13,7 @@ cars_template: List[Callable[[str], str]] = [
     lambda c: f"a photo of my old {c}.",
 ]
 
-# CIFAR-10データセット用テンプレート
+# Templates for CIFAR-10 dataset
 cifar10_template: List[Callable[[str], str]] = [
     lambda c: f"a photo of a {c}.",
     lambda c: f"a blurry photo of a {c}.",
@@ -42,7 +35,7 @@ cifar10_template: List[Callable[[str], str]] = [
     lambda c: f"a photo of the big {c}.",
 ]
 
-# CIFAR-100データセット用テンプレート
+# Templates for CIFAR-100 dataset
 cifar100_template: List[Callable[[str], str]] = [
     lambda c: f"a photo of a {c}.",
     lambda c: f"a blurry photo of a {c}.",
@@ -64,7 +57,7 @@ cifar100_template: List[Callable[[str], str]] = [
     lambda c: f"a photo of the big {c}.",
 ]
 
-# DTD (Describable Textures Dataset)用テンプレート
+# Templates for Describable Textures Dataset
 dtd_template: List[Callable[[str], str]] = [
     lambda c: f"a photo of a {c} texture.",
     lambda c: f"a photo of a {c} pattern.",
@@ -76,31 +69,31 @@ dtd_template: List[Callable[[str], str]] = [
     lambda c: f"a photo of the {c} object.",
 ]
 
-# EuroSAT衛星画像データセット用テンプレート
+# Templates for EuroSAT satellite imagery dataset
 eurosat_template: List[Callable[[str], str]] = [
     lambda c: f"a centered satellite photo of {c}.",
     lambda c: f"a centered satellite photo of a {c}.",
     lambda c: f"a centered satellite photo of the {c}.",
 ]
 
-# Food-101料理画像データセット用テンプレート
+# Templates for Food-101 dataset
 food101_template: List[Callable[[str], str]] = [
     lambda c: f"a photo of {c}, a type of food.",
 ]
 
-# GTSRB交通標識データセット用テンプレート
+# Templates for German Traffic Sign Recognition Benchmark
 gtsrb_template: List[Callable[[str], str]] = [
     lambda c: f"a zoomed in photo of a '{c}' traffic sign.",
     lambda c: f"a centered photo of a '{c}' traffic sign.",
     lambda c: f"a close up photo of a '{c}' traffic sign.",
 ]
 
-# MNIST手書き数字データセット用テンプレート
+# Templates for MNIST handwritten digits dataset
 mnist_template: List[Callable[[str], str]] = [
     lambda c: f"a photo of the number: '{c}'.",
 ]
 
-# ImageNetデータセット用テンプレート
+# Templates for ImageNet dataset
 imagenet_template: List[Callable[[str], str]] = [
     lambda c: f"a bad photo of a {c}.",
     lambda c: f"a photo of many {c}.",
@@ -184,7 +177,7 @@ imagenet_template: List[Callable[[str], str]] = [
     lambda c: f"a tattoo of the {c}.",
 ]
 
-# RESISC45衛星画像データセット用テンプレート
+# Templates for RESISC45 remote sensing dataset
 resisc45_template: List[Callable[[str], str]] = [
     lambda c: f"satellite imagery of {c}.",
     lambda c: f"aerial imagery of {c}.",
@@ -206,24 +199,24 @@ resisc45_template: List[Callable[[str], str]] = [
     lambda c: f"aerial view of the {c}.",
 ]
 
-# STL-10データセット用テンプレート
+# Templates for STL-10 dataset
 stl10_template: List[Callable[[str], str]] = [
     lambda c: f"a photo of a {c}.",
     lambda c: f"a photo of the {c}.",
 ]
 
-# SUN397シーンデータセット用テンプレート
+# Templates for SUN397 scene dataset
 sun397_template: List[Callable[[str], str]] = [
     lambda c: f"a photo of a {c}.",
     lambda c: f"a photo of the {c}.",
 ]
 
-# SVHN家屋番号データセット用テンプレート
+# Templates for Street View House Numbers dataset
 svhn_template: List[Callable[[str], str]] = [
     lambda c: f"a photo of the number: '{c}'.",
 ]
 
-# データセット名とテンプレートのマッピング
+# Mapping from dataset names to their templates
 dataset_to_template: Dict[str, List[Callable[[str], str]]] = {
     "Cars": cars_template,
     "CIFAR10": cifar10_template,
@@ -242,17 +235,6 @@ dataset_to_template: Dict[str, List[Callable[[str], str]]] = {
 
 
 def get_templates(dataset_name: str) -> List[Callable[[str], str]]:
-    """指定されたデータセットのテンプレートを取得する
-
-    Args:
-        dataset_name: データセット名
-
-    Returns:
-        テンプレートのリスト
-
-    Raises:
-        AssertionError: サポートされていないデータセット名が指定された場合
-    """
     if dataset_name.endswith("Val"):
         return get_templates(dataset_name.replace("Val", ""))
     assert dataset_name in dataset_to_template, f"Unsupported dataset: {dataset_name}"

@@ -1,13 +1,3 @@
-"""GTSRBデータセットを扱うモジュール
-
-German Traffic Sign Recognition Benchmark (GTSRB)データセットを読み込み、
-前処理を行うためのクラスを提供する。
-
-Classes:
-    PyTorchGTSRB: GTSRBデータセットの基底クラス
-    GTSRB: GTSRBデータセットのラッパークラス
-"""
-
 import csv
 import os
 import pathlib
@@ -25,17 +15,6 @@ from torchvision.datasets.vision import VisionDataset
 
 
 def find_classes(directory: str) -> Tuple[List[str], Dict[str, int]]:
-    """ディレクトリ内のクラスを見つける
-
-    Args:
-        directory: ディレクトリパス
-
-    Raises:
-        FileNotFoundError: クラスフォルダが見つからない場合
-
-    Returns:
-        クラス名のリストとクラス名をインデックスに変換する辞書のタプル
-    """
     classes = sorted(
         entry.name
         for entry in os.scandir(directory) if entry.is_dir()
@@ -50,15 +29,6 @@ def find_classes(directory: str) -> Tuple[List[str], Dict[str, int]]:
 
 
 class PyTorchGTSRB(VisionDataset):
-    """GTSRBデータセットの基底クラス
-
-    Attributes:
-        _split: 'train'または'test'
-        _base_folder: データセットの保存先ディレクトリ
-        _target_folder: データセットの保存先ディレクトリ
-        _samples: 画像ファイルパスとラベルのリスト
-    """
-
     def __init__(
         self,
         root: str,
@@ -67,18 +37,6 @@ class PyTorchGTSRB(VisionDataset):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
-        """GTSRBデータセットを初期化
-
-        Args:
-            root: データセットの保存先ディレクトリ
-            split: 'train'または'test'. Defaults to "train".
-            transform: 画像の変換関数. Defaults to None.
-            target_transform: ターゲットの変換関数. Defaults to None.
-            download: ダウンロードするかどうか. Defaults to False.
-
-        Raises:
-            RuntimeError: データセットが見つからない場合
-        """
         super().__init__(
             root, transform=transform, target_transform=target_transform
         )
@@ -99,7 +57,6 @@ class PyTorchGTSRB(VisionDataset):
                 "Dataset not found. You can use download=True to download it"
             )
 
-        # 訓練データとテストデータでサンプルの読み込み方法が異なる
         if self._split == "train":
             _, class_to_idx = find_classes(str(self._target_folder))
             samples = make_dataset(
@@ -123,22 +80,9 @@ class PyTorchGTSRB(VisionDataset):
         self.target_transform = target_transform
 
     def __len__(self) -> int:
-        """データセットのサイズを返す
-
-        Returns:
-            データセットのサイズ
-        """
         return len(self._samples)
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
-        """指定したインデックスのデータを取得
-
-        Args:
-            index: インデックス
-
-        Returns:
-            画像とターゲットのタプル
-        """
         path, target = self._samples[index]
         sample = PIL.Image.open(path).convert("RGB")
 
@@ -151,15 +95,9 @@ class PyTorchGTSRB(VisionDataset):
         return sample, target
 
     def _check_exists(self) -> bool:
-        """データセットが存在するかどうかを返す
-
-        Returns:
-            データセットが存在するかどうか
-        """
         return self._target_folder.is_dir()
 
     def download(self) -> None:
-        """データセットをダウンロードする"""
         if self._check_exists():
             return
 
@@ -188,16 +126,6 @@ class PyTorchGTSRB(VisionDataset):
 
 
 class GTSRB:
-    """GTSRBデータセットのラッパークラス
-
-    Attributes:
-        train_dataset: 学習用データセット
-        train_loader: 学習用データローダー
-        test_dataset: テスト用データセット
-        test_loader: テスト用データローダー
-        classnames: クラス名のリスト
-    """
-
     def __init__(
         self,
         preprocess: torchvision.transforms.Compose,
@@ -205,16 +133,6 @@ class GTSRB:
         batch_size: int = 32,
         num_workers: int = 4
     ) -> None:
-        """GTSRBデータセットを初期化
-
-        Args:
-            preprocess: 前処理関数
-            location: データセットの保存先ディレクトリ.
-                Defaults to os.path.expanduser("dataset").
-            batch_size: バッチサイズ. Defaults to 32.
-            num_workers: データローダーの並列数. Defaults to 4.
-        """
-        # 訓練データの設定
         self.train_dataset = PyTorchGTSRB(
             root=location,
             download=True,
@@ -229,7 +147,6 @@ class GTSRB:
             num_workers=num_workers
         )
 
-        # テストデータの設定
         self.test_dataset = PyTorchGTSRB(
             root=location,
             download=True,
@@ -244,8 +161,6 @@ class GTSRB:
             num_workers=num_workers
         )
 
-        # OpenAI形式のクラス名を設定
-        # https://github.com/openai/CLIP/blob/main/data/prompts.md
         self.classnames = [
             "red and white circle 20 kph speed limit",
             "red and white circle 30 kph speed limit",
@@ -297,7 +212,6 @@ class GTSRB:
 
 
 if __name__ == "__main__":
-    # 動作検証
     import open_clip
 
     _, preprocess, _ = open_clip.create_model_and_transforms(

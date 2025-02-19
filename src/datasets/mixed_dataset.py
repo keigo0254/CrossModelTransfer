@@ -1,14 +1,5 @@
-"""複数のデータセットを混合したデータセットを作成するモジュール
-
-複数のデータセットから指定された数のサンプルを取り出し、
-ランダムに混合した新しいデータセットを作成する。
-
-Classes:
-    MixedDataset: 複数データセットを混合したデータセット
-"""
-
 import random
-from typing import List
+from typing import List, Tuple
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -19,15 +10,11 @@ from .registry import get_dataset
 
 
 class MixedDataset(Dataset):
-    """複数のデータセットを混合したデータセット
+    """Dataset class that combines multiple datasets.
 
-    Attributes:
-        dataset_list: 混合するデータセット名のリスト
-        root: データセットのルートディレクトリ
-        dataset: 混合されたデータセットのサンプル
-        preprocess: 前処理関数
+    Take samples from multiple source datasets and combine them into a single
+    mixed dataset. The samples are randomly shuffled.
     """
-
     def __init__(
         self,
         dataset_list: List[str],
@@ -35,14 +22,6 @@ class MixedDataset(Dataset):
         num_images: int,
         preprocess
     ) -> None:
-        """MixedDatasetの初期化
-
-        Args:
-            dataset_list: 混合するデータセット名のリスト
-            root: データセットのルートディレクトリ
-            num_images: 各データセットから取り出すサンプル数
-            preprocess: 前処理関数
-        """
         super().__init__()
         self.dataset_list = dataset_list
         self.root = root
@@ -52,7 +31,7 @@ class MixedDataset(Dataset):
         print(f"Creating mixed dataset with {num_images} images from each dataset")
         for dataset_name in dataset_list:
             print(f"Loading {num_images} images from {dataset_name}")
-            # 各データセットを読み込み
+            # Load each dataset
             dataset = get_dataset(
                 dataset_name,
                 transforms.ToTensor(),
@@ -62,32 +41,23 @@ class MixedDataset(Dataset):
             )
             dataloader = get_dataloader(dataset, is_train=True, args=None)
 
-            # 指定された数のサンプルを取り出す
+            # Extract specified number of samples
             for i, batch in enumerate(dataloader):
                 if i >= num_images:
                     break
                 batch = maybe_dictionarize(batch)
                 self.dataset.append((batch["images"], batch["labels"], dataset_name))
 
-        # サンプルをランダムに並び替え
+        # Randomly shuffle samples
         random.shuffle(self.dataset)
 
     def __len__(self) -> int:
-        """データセットの長さを返す"""
         return len(self.dataset)
 
-    def __getitem__(self, idx: int):
-        """指定されたインデックスのサンプルを返す
-
-        Args:
-            idx: サンプルのインデックス
-
-        Returns:
-            前処理済み画像、ラベル、データセット名のタプル
-        """
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, str]:
         img, label, dataset_name = self.dataset[idx]
 
-        # 前処理を適用
+        # Apply preprocessing if specified
         if self.preprocess is not None:
             if isinstance(img, torch.Tensor):
                 if img.dim() == 4:

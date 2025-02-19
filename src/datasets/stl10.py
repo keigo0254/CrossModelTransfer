@@ -1,11 +1,3 @@
-"""STL10データセットを扱うモジュール
-
-STL10データセットを読み込み、前処理を行うためのクラスを提供する。
-
-Classes:
-    STL10: STL10データセットのラッパークラス
-"""
-
 import os
 from typing import List
 
@@ -16,16 +8,6 @@ from torch.utils.data import DataLoader
 
 
 class STL10:
-    """STL10データセットのラッパークラス
-
-    Attributes:
-        train_dataset: 学習用データセット
-        train_loader: 学習用データローダー
-        test_dataset: テスト用データセット
-        test_loader: テスト用データローダー
-        classnames: クラス名のリスト
-    """
-
     def __init__(
         self,
         preprocess: transforms.Compose,
@@ -33,19 +15,8 @@ class STL10:
         batch_size: int = 32,
         num_workers: int = 4
     ) -> None:
-        """STL10データセットのラッパークラスを初期化
-
-        Args:
-            preprocess: 前処理関数
-            location: データセットのルートディレクトリ.
-                Defaults to os.path.expanduser("dataset").
-            batch_size: バッチサイズ. Defaults to 32.
-            num_workers: データローダーの並列数. Defaults to 4.
-        """
-        # データセットのパスを設定
         location = os.path.join(location, "stl10")
 
-        # 学習用データセットの設定
         self.train_dataset: datasets.STL10 = datasets.STL10(
             root=location,
             download=True,
@@ -60,7 +31,6 @@ class STL10:
             num_workers=num_workers
         )
 
-        # テスト用データセットの設定
         self.test_dataset: datasets.STL10 = datasets.STL10(
             root=location,
             download=True,
@@ -79,7 +49,6 @@ class STL10:
 
 
 if __name__ == "__main__":
-    # 動作検証用コード
     import open_clip
 
     _, preprocess, _ = open_clip.create_model_and_transforms(

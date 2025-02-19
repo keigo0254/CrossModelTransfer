@@ -1,14 +1,4 @@
-"""ImageNetデータセットを扱うモジュール
-
-ImageNetデータセットを読み込み、前処理を行うためのクラスを提供する。
-
-Classes:
-    ImageNet: ImageNetデータセットのラッパークラス
-    ImageNetTrain: ImageNetの学習用データセットのみを扱うクラス
-    ImageNetK: 各クラスK個のサンプルのみを使用するImageNetデータセット
-"""
-
-import os  # ファイルパス操作のためのモジュール
+import os
 
 import numpy as np
 import torch
@@ -17,6 +7,7 @@ import torchvision
 from .common import ImageFolderWithPaths, SubsetSampler
 
 
+# List of class names in ImageNet dataset
 imagenet_classnames = [
     "tench", "goldfish", "great white shark", "tiger shark", "hammerhead shark",
     "electric ray", "stingray", "rooster", "hen", "ostrich", "brambling",
@@ -235,20 +226,6 @@ imagenet_classnames = [
 
 
 class ImageNet:
-    """ImageNetデータセットのラッパークラス
-
-    Attributes:
-        preprocess: 前処理関数
-        location: データセットのルートディレクトリ
-        batch_size: バッチサイズ
-        num_workers: データローダーの並列数
-        classnames: クラス名のリスト
-        train_dataset: 学習用データセット
-        train_loader: 学習用データローダー
-        test_dataset: テスト用データセット
-        test_loader: テスト用データローダー
-    """
-
     def __init__(
         self,
         preprocess: torchvision.transforms.Compose,
@@ -256,15 +233,6 @@ class ImageNet:
         batch_size: int = 32,
         num_workers: int = 4
     ) -> None:
-        """ImageNetデータセットのラッパークラスを初期化
-
-        Args:
-            preprocess: 前処理関数
-            location: データセットのルートディレクトリ.
-                Defaults to os.path.expanduser("dataset").
-            batch_size: バッチサイズ. Defaults to 32.
-            num_workers: データローダーの並列数. Defaults to 4.
-        """
         self.preprocess = preprocess
         self.location = location
         self.batch_size = batch_size
@@ -275,7 +243,6 @@ class ImageNet:
         self.populate_test()
 
     def populate_train(self) -> None:
-        """学習用データセットとデータローダーを設定"""
         traindir = os.path.join(self.location, self.name(), "train")
         self.train_dataset = ImageFolderWithPaths(
             traindir,
@@ -292,7 +259,6 @@ class ImageNet:
         )
 
     def populate_test(self) -> None:
-        """テスト用データセットとデータローダーを設定"""
         self.test_dataset = self.get_test_dataset()
         self.test_loader = torch.utils.data.DataLoader(
             self.test_dataset,
@@ -302,74 +268,37 @@ class ImageNet:
         )
 
     def get_test_path(self) -> str:
-        """テストデータのパスを取得
-
-        Returns:
-            テストデータのパス
-        """
         test_path = os.path.join(self.location, self.name(), "val_in_folder")
         if not os.path.exists(test_path):
             test_path = os.path.join(self.location, self.name(), "val")
         return test_path
 
     def get_train_sampler(self) -> None:
-        """学習用データのサンプラーを取得
-
-        Returns:
-            None: デフォルトではサンプラーを使用しない
-        """
         return None
 
     def get_test_sampler(self) -> None:
-        """テスト用データのサンプラーを取得
-
-        Returns:
-            None: デフォルトではサンプラーを使用しない
-        """
         return None
 
     def get_test_dataset(self) -> ImageFolderWithPaths:
-        """テスト用データセットを取得
-
-        Returns:
-            テスト用データセット
-        """
         return ImageFolderWithPaths(
             self.get_test_path(),
             transform=self.preprocess
         )
 
     def name(self) -> str:
-        """データセットの名前を取得
-
-        Returns:
-            データセットの名前
-        """
         return "imagenet"
 
 
 class ImageNetTrain(ImageNet):
-    """ImageNetの学習用データセットのみを扱うクラス"""
-
     def get_test_dataset(self) -> None:
-        """テストデータは使用しない"""
         pass
 
 
 class ImageNetK(ImageNet):
-    """各クラスK個のサンプルのみを使用するImageNetデータセット"""
-
     def get_train_sampler(self) -> SubsetSampler:
-        """各クラスK個のサンプルを選択するサンプラーを取得
-
-        Returns:
-            選択されたサンプルのインデックスを持つサンプラー
-        """
-        # サンプル選択用の配列を初期化
         idxs = np.zeros(len(self.train_dataset.targets))
         target_array = np.array(self.train_dataset.targets)
 
-        # 各クラスについてK個のサンプルを選択
         for c in range(1000):
             m = target_array == c
             n = len(idxs[m])
@@ -384,7 +313,6 @@ class ImageNetK(ImageNet):
 
 
 if __name__ == "__main__":
-    # 動作検証
     import open_clip
 
     _, preprocess, _ = open_clip.create_model_and_transforms(

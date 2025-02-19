@@ -1,12 +1,3 @@
-"""
-DTDデータセットを扱うモジュール
-
-Describable Textures Dataset (DTD)を読み込み、前処理を行うためのクラスを提供する。
-
-Classes:
-    DTD: DTDデータセットのラッパークラス
-"""
-
 import os
 
 import torch
@@ -15,16 +6,6 @@ import torchvision.datasets as datasets
 
 
 class DTD:
-    """DTDデータセットのラッパークラス
-
-    Attributes:
-        train_dataset: 学習用データセット
-        train_loader: 学習用データローダー
-        test_dataset: テスト用データセット
-        test_loader: テスト用データローダー
-        classnames: クラス名のリスト
-    """
-
     def __init__(
         self,
         preprocess: torchvision.transforms.Compose,
@@ -32,20 +13,11 @@ class DTD:
         batch_size: int = 32,
         num_workers: int = 4
     ) -> None:
-        """DTDデータセットを扱うクラスを初期化
-
-        Args:
-            preprocess: 前処理関数
-            location: データセットの保存先ディレクトリ.
-                Defaults to os.path.expanduser("dataset").
-            batch_size: バッチサイズ. Defaults to 32.
-            num_workers: データローダーの並列数. Defaults to 4.
-        """
-        # データセットのパスを設定
+        # Setup dataset paths
         traindir = os.path.join(location, "dtd", "train")
         valdir = os.path.join(location, "dtd", "val")
 
-        # 訓練データの設定
+        # Setup training data
         self.train_dataset = datasets.ImageFolder(
             traindir,
             transform=preprocess
@@ -57,7 +29,7 @@ class DTD:
             num_workers=num_workers
         )
 
-        # テストデータの設定
+        # Setup test data
         self.test_dataset = datasets.ImageFolder(
             valdir,
             transform=preprocess
@@ -69,7 +41,7 @@ class DTD:
             num_workers=num_workers
         )
 
-        # クラス名の設定
+        # Setup class names
         idx_to_class = {
             v: k for k, v in self.train_dataset.class_to_idx.items()
         }
@@ -80,7 +52,7 @@ class DTD:
 
 
 if __name__ == "__main__":
-    # 動作検証
+    # Test functionality
     import open_clip
 
     _, preprocess, _ = open_clip.create_model_and_transforms(

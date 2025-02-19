@@ -1,26 +1,9 @@
-"""データセットの読み込みやデータローダーの作成を行うモジュール
-
-データセットの読み込み、データローダーの作成、特徴量の抽出などの
-共通的な機能を提供する。
-
-Classes:
-    SubsetSampler: データセットの一部をサンプリングするクラス
-    ImageFolderWithPaths: 画像フォルダのパスを保持するデータセットクラス 
-    FeatureDataset: 特徴量を保持するデータセットクラス
-
-Functions:
-    maybe_dictionarize: バッチを辞書形式に変換
-    get_features_helper: データローダーから特徴量を抽出
-    get_features: キャッシュを考慮して特徴量を取得
-    get_dataloader: データローダーを取得
-"""
-
 from argparse import Namespace
 import collections
 import glob
 import os
 import random
-from typing import Any, Dict, Generator, List
+from typing import Any, Dict, Generator, List, Union
 
 import torch
 import torch.nn as nn
@@ -31,57 +14,23 @@ from tqdm import tqdm
 
 
 class SubsetSampler(Sampler):
-    """データセットの一部をサンプリングするためのクラス
-
-    Attributes:
-        indices (List[int]): サンプリングするインデックスのリスト
-    """
-
     def __init__(self, indices: List[int]) -> None:
-        """SubsetSamplerを初期化
-
-        Args:
-            indices: サンプリングするインデックスのリスト
-        """
         self.indices = indices
 
     def __iter__(self) -> Generator[int, None, None]:
-        """インデックスをイテレートする
-
-        Returns:
-            インデックスのジェネレータ
-        """
         return (i for i in self.indices)
 
     def __len__(self) -> int:
-        """インデックスの数を取得
-
-        Returns:
-            インデックスの数
-        """
         return len(self.indices)
 
 
 class ImageFolderWithPaths(datasets.ImageFolder):
-    """画像フォルダのパスを保持するデータセットクラス
-
-    Attributes:
-        flip_label_prob: ラベルを反転する確率
-    """
-
     def __init__(
         self,
         path: str | os.PathLike,
         transform: torchvision.transforms.Compose,
         flip_label_prob: float = 0.0
     ) -> None:
-        """画像フォルダのパスを保持するデータセットクラスを初期化
-
-        Args:
-            path: 画像フォルダのパス
-            transform: 前処理関数
-            flip_label_prob: ラベルを反転する確率. Defaults to 0.0.
-        """
         super().__init__(path, transform)
         self.flip_label_prob = flip_label_prob
         if self.flip_label_prob > 0:
@@ -95,15 +44,9 @@ class ImageFolderWithPaths(datasets.ImageFolder):
                         new_label
                     )
 
-    def __getitem__(self, index) -> Dict[str, int, str | os.PathLike]:
-        """指定したインデックスのデータを取得
-
-        Args:
-            index: インデックス
-
-        Returns:
-            画像データ、ラベル、画像のパスを含む辞書
-        """
+    def __getitem__(
+        self, index
+    ) -> Dict[str, Union[int, str, os.PathLike]]:
         image, label = super(ImageFolderWithPaths, self).__getitem__(index)
         return {
             "images": image,
@@ -114,18 +57,7 @@ class ImageFolderWithPaths(datasets.ImageFolder):
 
 def maybe_dictionarize(
     batch
-) -> Dict[torch.Tensor, int] | Dict[torch.Tensor, int, Any]:
-    """バッチを辞書に変換
-
-    Args:
-        batch: 変換対象のバッチ
-
-    Raises:
-        ValueError: 要素数が想定外の場合
-
-    Returns:
-        辞書形式に変換されたバッチ
-    """
+) -> Dict[str, Union[torch.Tensor, int, Any]]:
     if isinstance(batch, dict):
         return batch
 
@@ -144,19 +76,9 @@ def get_features_helper(
     dataloader: DataLoader,
     device: torch.device
 ) -> Dict[str, torch.Tensor]:
-    """データローダーから特徴量を取得
-
-    Args:
-        image_encoder: 特徴量抽出用のエンコーダ
-        dataloader: 入力データのローダー
-        device: 計算に使用するデバイス
-
-    Returns:
-        抽出された特徴量を含む辞書
-    """
     all_data = collections.defaultdict(list)
 
-    # エンコーダの設定
+    # Configure encoder
     image_encoder = image_encoder.to(device)
     image_encoder = torch.nn.DataParallel(
         image_encoder,
@@ -164,7 +86,7 @@ def get_features_helper(
     )
     image_encoder.eval()
 
-    # 特徴量の抽出
+    # Extract features
     with torch.no_grad():
         for batch in tqdm(dataloader):
             batch = maybe_dictionarize(batch)
@@ -181,7 +103,7 @@ def get_features_helper(
                 else:
                     all_data[key].extend(val)
 
-    # テンソルの結合
+    # Concatenate tensors
     for key, val in all_data.items():
         if torch.is_tensor(val[0]):
             all_data[key] = torch.cat(val).numpy()
@@ -192,20 +114,9 @@ def get_features_helper(
 def get_features(
     is_train: bool,
     image_encoder: nn.Module,
-    dataset: Any,   # データセットのラッパークラス
+    dataset: Any,   # Dataset wrapper class
     device: torch.device
 ) -> Dict[str, torch.Tensor]:
-    """キャッシュを考慮して特徴量を取得
-
-    Args:
-        is_train: 学習データかどうか
-        image_encoder: 特徴量抽出用のエンコーダ
-        dataset: 入力データセット
-        device: 計算に使用するデバイス
-
-    Returns:
-        特徴量を含む辞書
-    """
     split = "train" if is_train else "val"
     dname = type(dataset).__name__
     if image_encoder.cache_dir is not None:
@@ -235,12 +146,6 @@ def get_features(
 
 
 class FeatureDataset(Dataset):
-    """特徴量を保持するデータセットクラス
-
-    Attributes:
-        data: 特徴量データ
-    """
-
     def __init__(
         self,
         is_train: bool,
@@ -248,55 +153,24 @@ class FeatureDataset(Dataset):
         dataset: Dataset,
         device: torch.device
     ) -> None:
-        """特徴量を保持するデータセットクラスを初期化
-
-        Args:
-            is_train: 学習データかどうか
-            image_encoder: 特徴量抽出用のエンコーダ
-            dataset: 入力データセット
-            device: 計算に使用するデバイス
-        """
         self.data = get_features(is_train, image_encoder, dataset, device)
 
     def __len__(self) -> int:
-        """データの数を取得
-
-        Returns:
-            データの数
-        """
         return len(self.data["features"])
 
     def __getitem__(self, idx) -> Dict[str, torch.Tensor]:
-        """指定したインデックスのデータを取得
-
-        Args:
-            idx: インデックス
-
-        Returns:
-            特徴量データを含む辞書
-        """
         data = {k: v[idx] for k, v in self.data.items()}
         data["features"] = torch.from_numpy(data["features"]).float()
         return data
 
 
 def get_dataloader(
-    dataset: Any,   # データセットのラッパークラス
+    dataset: Any,   # Dataset wrapper class
     is_train: bool,
     args: Namespace,
     image_encoder: nn.Module = None
 ) -> DataLoader | Any:
-    """データローダーを取得
-
-    Args:
-        dataset: 入力データセット
-        is_train: 学習データかどうか
-        args: 設定パラメータ
-        image_encoder: 特徴量抽出用のエンコーダ. Defaults to None.
-
-    Returns:
-        データローダー
-    """
+    """Get DataLoader from Dataset wrapper class."""
     if image_encoder is not None:
         feature_dataset = FeatureDataset(
             is_train, image_encoder,

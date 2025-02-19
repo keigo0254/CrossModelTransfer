@@ -1,11 +1,3 @@
-"""MNISTデータセットを扱うモジュール
-
-MNISTデータセットを読み込み、前処理を行うためのクラスを提供する。
-
-Classes:
-    MNIST: MNISTデータセットのラッパークラス
-"""
-
 import os
 from typing import List
 
@@ -16,16 +8,6 @@ from torch.utils.data import DataLoader
 
 
 class MNIST:
-    """MNISTデータセットのラッパークラス
-
-    Attributes:
-        train_dataset: 学習用データセット
-        train_loader: 学習用データローダー
-        test_dataset: テスト用データセット
-        test_loader: テスト用データローダー
-        classnames: クラス名のリスト
-    """
-
     def __init__(
         self,
         preprocess: transforms.Compose,
@@ -33,16 +15,6 @@ class MNIST:
         batch_size: int = 32,
         num_workers: int = 4
     ) -> None:
-        """MNISTデータセットのラッパークラスを初期化
-
-        Args:
-            preprocess: 前処理関数
-            location: データセットのルートディレクトリ.
-                Defaults to os.path.expanduser("dataset").
-            batch_size: バッチサイズ. Defaults to 32.
-            num_workers: データローダーの並列数. Defaults to 4.
-        """
-        # 学習用データセットの設定
         self.train_dataset: datasets.MNIST = datasets.MNIST(
             root=location,
             download=True,
@@ -57,7 +29,6 @@ class MNIST:
             num_workers=num_workers
         )
 
-        # テスト用データセットの設定
         self.test_dataset: datasets.MNIST = datasets.MNIST(
             root=location,
             download=True,
@@ -76,7 +47,6 @@ class MNIST:
 
 
 if __name__ == "__main__":
-    # 動作検証用コード
     import open_clip
 
     _, preprocess, _ = open_clip.create_model_and_transforms(
