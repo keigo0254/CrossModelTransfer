@@ -47,8 +47,6 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
             group=f"finetune_{args.finetuning_type}",
             name=f"{args.model_architecture}_{args.pretrained}_{args.train_dataset}_{args.seed}",
             config=config_dict,
-            id=f"{args.model_architecture}_{args.pretrained}_{args.train_dataset}_{args.seed}",
-            resume="allow",
             settings=wandb.Settings(start_method="thread")
         )
 
@@ -95,15 +93,19 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
     preprocess_fn = classifier.image_encoder.train_preprocess
 
     # Load Dataset and DataLoader
-    dataset = get_dataset(
-        args.train_dataset, preprocess_fn, args.dataset_root,
+    train_dataset = get_dataset(
+        args.train_dataset+"Val", preprocess_fn, args.dataset_root,
+        args.batch_size, args.num_workers
+    )
+    val_dataset = get_dataset(
+        args.train_dataset+"Val", preprocess_fn, args.dataset_root,
         args.batch_size, args.num_workers
     )
     train_dataloader = get_dataloader(
-        dataset, is_train=True, args=args, image_encoder=None
+        train_dataset, is_train=True, args=args, image_encoder=None
     )
     val_dataloader = get_dataloader(
-        dataset, is_train=False, args=args, image_encoder=None
+        val_dataset, is_train=False, args=args, image_encoder=None
     )
     train_num_batches = len(train_dataloader)
     val_num_batches = len(val_dataloader)
@@ -118,7 +120,7 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
 
     # Watch the model
     if args.wandb:
-        wandb.watch(ddp_classifier, log="all")
+        wandb.watch(ddp_classifier, log="all", log_freq=250)
 
     # Define loss function, optimizer, and scheduler
     if args.ls > 0.0:
@@ -142,6 +144,15 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
     total_train_time = 0.0
     total_val_time = 0.0
     for epoch in range(args.epochs):
+        train_losses = []
+        train_accs = []
+        training_batch_times = []
+        val_losses = []
+        val_accs = []
+        validation_batch_times = []
+        task_vector_norms = []
+        learning_rates = []
+
         # Training
         epoch_train_start_time = time.time()
         ddp_classifier.train()
@@ -164,13 +175,19 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
 
             norm = calculate_norm(ddp_classifier.module.image_encoder)
 
+            train_losses.append(train_loss.item())
+            train_accs.append(train_acc)
+            task_vector_norms.append(norm.item())
+            learning_rates.append(optimizer.param_groups[0]["lr"])
+
             if (i + 1) % args.grad_accum_steps == 0:
                 scheduler(step)
                 nn.utils.clip_grad_norm_(trainable_params, max_norm=1.0)
                 optimizer.step()
                 optimizer.zero_grad()
 
-                batch_time = time.time() - batch_start_time
+                training_batch_time = time.time() - batch_start_time
+                training_batch_times.append(training_batch_time)
                 percent_complete = 100 * i / len(ddp_train_loader)
                 print(
                     f"Training on {args.train_dataset}\t Epoch: {epoch + 1}/{args.epochs}\t"
@@ -181,18 +198,8 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
                     f"Training Accuracy: {train_acc:.2%}\t"
                     f"Task Vector Norm: {norm:.4f}\t"
                     f"lr: {optimizer.param_groups[0]['lr']:.8f}\t"
-                    f"Training Batch Time: {batch_time:.2f}s", flush=True
+                    f"Training Batch Time: {training_batch_time:.2f}s", flush=True
                 )
-
-                if args.wandb:
-                    run.log({
-                        "Epoch": epoch + 1,
-                        "Training Loss": train_loss.item(),
-                        "Training Accuracy": train_acc,
-                        "Task Vector Norm": norm,
-                        "Learning Rate": optimizer.param_groups[0]["lr"],
-                        "Training Batch Time": batch_time
-                    })
 
         total_train_time += time.time() - epoch_train_start_time
         print(f"\nEpoch: {epoch + 1} Training Time: {total_train_time:.2f}s\n")
@@ -203,6 +210,7 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
         ddp_val_loader.sampler.set_epoch(epoch)
         with torch.no_grad():
             for i, batch in enumerate(ddp_val_loader):
+                step = i // args.grad_accum_steps + epoch * val_num_batches // args.grad_accum_steps
                 batch_start_time = time.time()
                 batch = maybe_dictionarize(batch)
                 inputs = batch["images"].to(rank)
@@ -216,8 +224,12 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
                 val_corrects = (predictions == labels).sum().item()
                 val_acc = val_corrects / len(labels)
 
+                val_losses.append(val_loss.item())
+                val_accs.append(val_acc)
+
                 if (i + 1) % args.grad_accum_steps == 0:
-                    batch_time = time.time() - batch_start_time
+                    validation_batch_time = time.time() - batch_start_time
+                    validation_batch_times.append(validation_batch_time)
                     percent_complete = 100 * i / len(ddp_val_loader)
                     print(
                         f"Validation on {args.train_dataset}\t Epoch: {epoch + 1}/{args.epochs}\t"
@@ -226,14 +238,8 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
                         f"Step: {step + 1}/{args.epochs * val_num_batches // args.grad_accum_steps}\t"
                         f"Validation Loss: {val_loss.item():.4f}\t"
                         f"Validation Accuracy: {val_acc:.2%}\t"
-                        f"Validation Batch Time: {batch_time:.2f}s", flush=True
+                        f"Validation Batch Time: {validation_batch_time:.2f}s", flush=True
                     )
-
-                    if args.wandb:
-                        run.log({
-                            "Validation Loss": val_loss.item(),
-                            "Validation Accuracy": val_acc,
-                        })
 
             if args.save:
                 if step % 200 == 0:
@@ -253,6 +259,19 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
 
         total_val_time += time.time() - epoch_val_start_time
         print(f"\nEpoch: {epoch + 1} Validation Time: {total_val_time:.2f}s\n")
+
+        if args.wandb:
+            run.log({
+                "Epoch": epoch + 1,
+                "Training Loss": np.mean(train_losses),
+                "Training Accuracy": np.mean(train_accs),
+                "Validation Loss": np.mean(val_losses),
+                "Validation Accuracy": np.mean(val_accs),
+                "Task Vector Norm": np.mean(task_vector_norms),
+                "Learning Rate": np.mean(learning_rates),
+                "Training Batch Time": np.mean(training_batch_times),
+                "Validation Batch Time": np.mean(validation_batch_times)
+            })
 
     print(f"Completed Training in {total_train_time:.2f}s")
     print(f"Completed Validation in {total_val_time:.2f}s")

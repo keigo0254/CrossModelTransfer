@@ -71,7 +71,7 @@ class TaskVector:
 
     def save_vector(self, path: str) -> None:
         print(f'Saving task vector to {path}')
-        torch_save(self.vector, path)
+        torch.save(self.vector, path)
 
     @classmethod
     def load_vector(cls, path: str) -> 'TaskVector':
@@ -91,8 +91,5 @@ if __name__ == "__main__":
     args.pretrained = "laion400m_e32"
     image_encoder_2 = ImageEncoder(args, keep_lang=False)
     task_vector = TaskVector(image_encoder_1, image_encoder_2)
-    new_image_encoder = task_vector.apply_to(image_encoder_1, 1.0)
-    print(new_image_encoder)
-    args.pretrained = "laion400m_e32"
-    args.eval_datasets = ["Cars"]
-    evaluate(new_image_encoder, args)
+    task_vector.save_vector("task_vector.pt")
+    task_vector = TaskVector.load_vector("task_vector.pt")
