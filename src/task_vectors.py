@@ -8,6 +8,7 @@ from utils import torch_load, torch_save
 
 
 class TaskVector:
+    """Create a task vector between a pretrained and finetuned model"""
     def __init__(
         self,
         pretrained_checkpoint: Optional[nn.Module] = None,

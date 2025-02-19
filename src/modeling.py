@@ -14,6 +14,7 @@ from utils import get_submodules
 
 
 class MultiheadAttention(nn.Module):
+    """Customed MultiheadAttention with LoRA or Linear layers"""
     def __init__(
         self,
         embed_dim: int,
@@ -161,6 +162,7 @@ class MultiheadAttention(nn.Module):
 
 
 class ImageEncoder(nn.Module):
+    """Image encoder with LoRA or Linear layers for MultiheadAttention"""
     def __init__(self, args: Args, keep_lang: bool = False):
         super().__init__()
 

@@ -13,6 +13,7 @@ class LoRALayer(nn.Module):
         alpha: int = 1,
         bias: bool = False,
     ):
+        """LoRA or Linear layer with additional weight"""
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -52,6 +53,11 @@ class LoRALayer(nn.Module):
             if self.bias:
                 nn.init.zeros_(self.bias)
 
+    @torch.no_grad()
+    def qr(self):
+        Q, R = torch.linalg.qr(self.U)
+        self.U.copy_(Q)
+
     def forward(self, inputs: torch.Tensor):
         if self.r > 0:
             return F.linear(inputs, self.U.T @ self.B @ self.A @ self.U) * self.alpha / self.r
@@ -75,6 +81,7 @@ class Linear(nn.Linear):
         weight: torch.Tensor = None,
         bias: torch.Tensor = None,
     ):
+        """Wrapper class with LoRA or Linear layer for MultiheadAttention"""
         self.r = r
         self.alpha = alpha
 
