@@ -50,9 +50,9 @@ class Args:
         default="openai",
         help="Pretrained type"
     )
-    base_pretrained: str = config(  # openai, laion400m_e31, etc.
-        default="openai",
-        help="Base pretrained type"
+    pretrained_to_transfer: str = config(  # openai, laion400m_e31, etc.
+        default=None,
+        help="Pretrained type to transfer knowledge from"
     )
     finetuning_type: str = config(  # full, linear, lora
         default="full",

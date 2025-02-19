@@ -166,12 +166,12 @@ class ImageEncoder(nn.Module):
     def __init__(self, args: Args, keep_lang: bool = False):
         super().__init__()
 
-        print(f"Loading {args.model_architecture} of pre-trained {args.base_pretrained} weights.")
+        print(f"Loading {args.model_architecture} of pre-trained {args.pretrained} weights.")
 
         self.model, self.train_preprocess, self.val_preprocess = (
             open_clip.create_model_and_transforms(
                 args.model_architecture,
-                pretrained=args.base_pretrained,
+                pretrained=args.pretrained,
                 cache_dir=args.cache_root
             )
         )
@@ -239,7 +239,7 @@ class ImageEncoder(nn.Module):
         cls.model, cls.train_preprocess, cls.val_preprocess = (
             open_clip.create_model_and_transforms(
                 args.model_architecture,
-                pretrained=args.base_pretrained,
+                pretrained=args.pretrained,
                 cache_dir=args.cache_root
             )
         )

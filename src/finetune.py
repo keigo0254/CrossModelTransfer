@@ -17,6 +17,7 @@ from distributed import cleanup_ddp, distribute_loader, setup_ddp
 from eval import evaluate
 from heads import get_classification_head
 from modeling import ImageClassifier, ImageEncoder
+from task_vectors import TaskVector
 from utils import cosine_lr, LabelSmoothing
 
 
@@ -61,7 +62,7 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
     model_dir = os.path.join(
         args.model_root,
         args.model_architecture,
-        args.base_pretrained,
+        args.pretrained,
         args.finetuning_type
     )
 
@@ -70,7 +71,7 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
         print(f"Loading a pretrained encoder from {args.pretrained_model_path}")
         image_encoder = ImageEncoder.load(args.pretrained_model_path)
     else:
-        print(f"Building a {args.base_pretrained} pretrained encoder")
+        print(f"Building a {args.pretrained} pretrained encoder")
         image_encoder = ImageEncoder(args, keep_lang=False)
         args.pretrained_model_path = os.path.join(
             model_dir,
@@ -242,9 +243,13 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
                         f"rank_{args.rank}_alpha_{args.alpha}",
                         "finetune",
                         f"bs_{args.batch_size}_seed_{args.seed}",
-                        f"finetuned_on_{args.train_dataset}_step_{step}.pt"
+                        f"finetuned_task_vector_on_{args.train_dataset}_step_{step}.pt"
                     )
-                    ddp_classifier.module.image_encoder.save(filename)
+                    task_vector = TaskVector(
+                        pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
+                        finetuned_checkpoint=ddp_classifier.module.image_encoder
+                    )
+                    task_vector.save_vector(filename)
 
         total_val_time += time.time() - epoch_val_start_time
         print(f"\nEpoch: {epoch + 1} Validation Time: {total_val_time:.2f}s\n")
@@ -265,9 +270,22 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
             f"rank_{args.rank}_alpha_{args.alpha}",
             "finetune",
             f"bs_{args.batch_size}_seed_{args.seed}",
-            f"finetuned_on_{args.train_dataset}.pt"
+            f"finetuned_image_encoder_on_{args.train_dataset}.pt"
         )
         ddp_classifier.module.image_encoder.save(filename)
+        task_vector = TaskVector(
+            pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
+            finetuned_checkpoint=ddp_classifier.module.image_encoder
+        )
+        filename = os.path.join(
+            model_dir,
+            f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
+            f"rank_{args.rank}_alpha_{args.alpha}",
+            "finetune",
+            f"bs_{args.batch_size}_seed_{args.seed}",
+            f"finetuned_task_vector_on_{args.train_dataset}.pt"
+        )
+        task_vector.save_vector(filename)
 
     # Evaluate the finetuned model
     evaluate(ddp_classifier.module.image_encoder, args)
@@ -315,7 +333,7 @@ if __name__ == "__main__":
         args.result = os.path.join(
             args.result_root,
             args.model_architecture,
-            args.base_pretrained,
+            args.pretrained,
             args.finetuning_type,
             f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
             f"rank_{args.rank}_alpha_{args.alpha}",
@@ -326,7 +344,7 @@ if __name__ == "__main__":
         args.fig = os.path.join(
             args.fig_root,
             args.model_architecture,
-            args.base_pretrained,
+            args.pretrained,
             args.finetuning_type,
             f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
             f"rank_{args.rank}_alpha_{args.alpha}",

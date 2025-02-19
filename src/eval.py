@@ -57,7 +57,7 @@ def eval_multihead_classifier(
 
         top1 = correct / n
 
-    print(f"Done evaluating on mixed dataset. Accuracy: {100*top1:.2f}%")
+    print(f"Done evaluating on mixed dataset. Accuracy: {top1:.2%}")
 
     return top1
 
@@ -102,7 +102,7 @@ def eval_single_dataset(
 
         top1 = correct / n
 
-    print(f"Done evaluating on {dataset_name}. Accuracy: {100*top1:.2f}%")
+    print(f"Done evaluating on {dataset_name}. Accuracy: {top1:.2%}")
 
     return top1
 
@@ -117,10 +117,10 @@ def evaluate(image_encoder: ImageEncoder, args: Args) -> Dict[str, float]:
 
     # Evaluate on each dataset
     for _, dataset_name in enumerate(args.eval_datasets):
-        print("Evaluating on", dataset_name)
+        print(f"\nEvaluating on {dataset_name}\n")
         top1 = eval_single_dataset(image_encoder, dataset_name, args)
         info[dataset_name] = top1
-        print(f"{dataset_name} Top-1 accuracy: {100*top1:.2f}%")
+        print(f"{dataset_name} Top-1 accuracy: {top1:.2%}")
 
     # Calculate average accuracy
     info["AVG."] = np.mean([info[dataset_name] for dataset_name in args.eval_datasets])
