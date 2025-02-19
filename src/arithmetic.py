@@ -63,7 +63,7 @@ def plot_coef_vs_average_accuracy(info: Dict[str, Dict[str, float]], args: Args)
     """Plot the coefficient vs average accuracy."""
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(info.keys(), [info[coef]['AVG.'] for coef in info.keys()])
-    ax.set_ylim(-0.05, 1.05)
+    ax.set_ylim(0, 1.05)
     ax.set_xlabel("Coefficient")
     ax.set_ylabel("Average Accuracy")
     ax.set_title(f"Coefficient vs Average Accuracy for {args.pretrained_to_transfer} on {args.pretrained}")

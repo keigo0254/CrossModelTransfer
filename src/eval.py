@@ -142,7 +142,7 @@ def evaluate(image_encoder: ImageEncoder, args: Args) -> Dict[str, float]:
 
         fig, ax = plt.subplots()
         ax.bar(dataset_names, accuracies, width=0.4, tick_label=dataset_names)
-        ax.set_ylim(-5, 105)
+        ax.set_ylim(0, 105)
         labels = ax.get_xticklabels()
         plt.setp(labels, rotation=30, fontsize=10)
         for x, y in zip(dataset_names, accuracies):

@@ -1,8 +1,8 @@
 #!bin/bash
-# usage: nohup bash cmd/arithmetic.sh > log/arithmetic.log &
-function arithmetic()
+# usage: nohup bash cmd/feature.sh > log/feature.log &
+function feature()
 {
-    python src/arithmetic.py \
+    python src/feature.py \
         --eval_datasets $eval_datasets \
         --model_architecture $model_architecture \
         --pretrained $pretrained \
@@ -29,7 +29,7 @@ alpha=32
 batch_size=128
 grad_accum_steps=1 # 1 for ViT-B-32, 2 for ViT-B-16 8 for ViT-L-14
 seed=2025
-arithmetic $eval_datasets $model_architecture $pretrained $pretrained_to_transfer $finetuning_type $lr $wd $rank $alpha $batch_size $grad_accum_steps $seed
+feature $eval_datasets $model_architecture $pretrained $pretrained_to_transfer $finetuning_type $lr $wd $rank $alpha $batch_size $grad_accum_steps $seed
 
 eval_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
 model_architecture=ViT-B-32
@@ -43,4 +43,4 @@ alpha=32
 batch_size=128
 grad_accum_steps=1 # 1 for ViT-B-32, 2 for ViT-B-16 8 for ViT-L-14
 seed=2025
-arithmetic $eval_datasets $model_architecture $pretrained $pretrained_to_transfer $finetuning_type $lr $wd $rank $alpha $batch_size $grad_accum_steps $seed
+feature $eval_datasets $model_architecture $pretrained $pretrained_to_transfer $finetuning_type $lr $wd $rank $alpha $batch_size $grad_accum_steps $seed

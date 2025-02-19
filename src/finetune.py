@@ -347,7 +347,7 @@ if __name__ == "__main__":
     torch.backends.cudnn.deterministic = True
 
     for dataset_name in args.train_datasets:
-        args.epochs = epochs[dataset_name] if args.epochs is None else args.epochs
+        args.epochs = epochs[dataset_name]
         args.train_dataset = dataset_name
         args.result = os.path.join(
             args.result_root,

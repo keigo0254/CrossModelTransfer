@@ -363,12 +363,14 @@ if __name__ == '__main__':
         "MNIST", "RESISC45", "SUN397", "SVHN",
         "CIFAR10", "CIFAR100", "ImageNet", "STL10"
     ]
-    args.finetuning_type = "linear"
-    args.rank = 0
+    args.finetuning_type = "lora"
+    args.rank = 4
     args.alpha = 8
     image_encoder = ImageEncoder(args, keep_lang=False)
     for name, param in image_encoder.named_parameters():
         print(name, param.requires_grad)
+    # for name, module in image_encoder.named_modules():
+    #     print(name, module)
 
     # evaluate(image_encoder, args)
 
