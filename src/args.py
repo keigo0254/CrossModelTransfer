@@ -46,11 +46,11 @@ class Args:
         default="ViT-B-32",
         help="Model architecture"
     )
-    pretrained: str = config(  # openai, laion400m_e31, etc.
+    pretrained: str = config(  # openai, laion400m_e32, etc.
         default="openai",
         help="Pretrained type"
     )
-    pretrained_to_transfer: str = config(  # openai, laion400m_e31, etc.
+    pretrained_to_transfer: str = config(  # openai, laion400m_e32, etc.
         default=None,
         help="Pretrained type to transfer knowledge from"
     )

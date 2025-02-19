@@ -86,11 +86,11 @@ if __name__ == "__main__":
     args: Args = Args().from_args()
     args.pretrained = "openai"
     image_encoder_1 = ImageEncoder(args, keep_lang=False)
-    args.pretrained = "laion400m_e31"
+    args.pretrained = "laion400m_e32"
     image_encoder_2 = ImageEncoder(args, keep_lang=False)
     task_vector = TaskVector(image_encoder_1, image_encoder_2)
     new_image_encoder = task_vector.apply_to(image_encoder_1, 1.0)
     print(new_image_encoder)
-    args.pretrained = "laion400m_e31"
+    args.pretrained = "laion400m_e32"
     args.eval_datasets = ["Cars"]
     evaluate(new_image_encoder, args)
