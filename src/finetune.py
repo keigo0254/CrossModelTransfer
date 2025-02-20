@@ -202,6 +202,23 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
                     f"Training Batch Time: {training_batch_time:.2f}s", flush=True
                 )
 
+            if args.save:
+                if train_step % 200 == 0:
+                    filename = os.path.join(
+                        model_dir,
+                        f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
+                        f"rank_{args.rank}_alpha_{args.alpha}",
+                        "finetune",
+                        f"bs_{args.batch_size}_seed_{args.seed}",
+                        f"finetuned_task_vector_on_{args.train_dataset}_step_{train_step}.pt"
+                    )
+                    image_encoder = copy.deepcopy(ddp_classifier.module.image_encoder).to("cpu")
+                    task_vector = TaskVector(
+                        pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
+                        finetuned_checkpoint=image_encoder
+                    )
+                    task_vector.save_vector(filename)
+
         total_train_time += time.time() - epoch_train_start_time
         print(f"\nEpoch: {epoch + 1} Training Time: {total_train_time:.2f}s\n")
 
@@ -241,23 +258,6 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
                         f"Validation Accuracy: {val_acc:.2%}\t"
                         f"Validation Batch Time: {validation_batch_time:.2f}s", flush=True
                     )
-
-            if args.save:
-                if train_step % 200 == 0:
-                    filename = os.path.join(
-                        model_dir,
-                        f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
-                        f"rank_{args.rank}_alpha_{args.alpha}",
-                        "finetune",
-                        f"bs_{args.batch_size}_seed_{args.seed}",
-                        f"finetuned_task_vector_on_{args.train_dataset}_step_{train_step}.pt"
-                    )
-                    image_encoder = copy.deepcopy(ddp_classifier.module.image_encoder).to("cpu")
-                    task_vector = TaskVector(
-                        pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
-                        finetuned_checkpoint=image_encoder
-                    )
-                    task_vector.save_vector(filename)
 
         total_val_time += time.time() - epoch_val_start_time
         print(f"\nEpoch: {epoch + 1} Validation Time: {total_val_time:.2f}s\n")
