@@ -196,13 +196,9 @@ class ImageEncoder(nn.Module):
                     )
                 )
 
-        self.freeze_pretrained_weight(args.finetuning_type)
-
-    def freeze_pretrained_weight(self, finetuning_type: str = "full"):
+    def freeze_pretrained_weight(self):
         for name, param in self.named_parameters():
             if "Delta.D" in name or "Delta.A" in name or "Delta.B" in name:
-                param.requires_grad_(True)
-            elif "Delta.b" in name and finetuning_type == "full":
                 param.requires_grad_(True)
             else:
                 param.requires_grad_(False)

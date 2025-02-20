@@ -33,8 +33,8 @@ arithmetic $eval_datasets $model_architecture $pretrained $pretrained_to_transfe
 
 eval_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
 model_architecture=ViT-B-32
-pretrained=openai
-pretrained_to_transfer=laion400m_e32
+pretrained=laion400m_e32
+pretrained_to_transfer=openai
 finetuning_type=linear # full, linear, lora
 lr=1e-05
 wd=0.1

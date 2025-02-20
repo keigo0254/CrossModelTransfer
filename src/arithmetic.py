@@ -54,7 +54,7 @@ def eval_task_vectors(pretrained_encoder: ImageEncoder, task_vector: TaskVector,
         image_encoder = task_vector.apply_to(pretrained_encoder, coef)
 
         info[f"{coef}"] = evaluate(image_encoder, args)
-        print(f"Average accuracy: {info[coef]['AVG.']:.2%}")
+        print(f"Average accuracy: {info[f'{coef}']['AVG.']:.2%}")
 
     return info
 
@@ -100,12 +100,21 @@ if __name__ == "__main__":
     torch.backends.cudnn.deterministic = True
 
     args.lamb = (
-        [round(0.1 * i) for i in range(0, 21)]
+        [round(0.1 * i, 2) for i in range(0, 21)]
         if args.lamb is None else [args.lamb]
     )
 
     # Load pretrained model
     pretrained_encoder = ImageEncoder(args, keep_lang=False)
+    pretrained_encoder.save(
+        os.path.join(
+            args.model_root,
+            args.model_architecture,
+            args.pretrained,
+            args.finetuning_type,
+            f"zeroshot_rank_{args.rank}.pt"
+        )
+    )
     state_dict = pretrained_encoder.state_dict()
     for key in state_dict.keys():
         if "Delta.D" in key or "Delta.b" in key or "Delta.A" in key or "Delta.B" in key:

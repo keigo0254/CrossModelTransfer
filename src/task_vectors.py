@@ -1,4 +1,5 @@
 import copy
+import os
 from typing import Dict, Optional, Union
 
 import torch
@@ -71,6 +72,7 @@ class TaskVector:
 
     def save_vector(self, path: str) -> None:
         print(f'Saving task vector to {path}')
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         torch.save(self.vector, path)
 
     @classmethod

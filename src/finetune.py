@@ -77,7 +77,8 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
             f"zeroshot_rank_{args.rank}.pt"
         )
         image_encoder.save(args.pretrained_model_path)
-    image_encoder.freeze_pretrained_weight(finetuning_type=args.finetuning_type)
+    if args.finetuning_type != "full":
+        image_encoder.freeze_pretrained_weight()
 
     classification_head = get_classification_head(args, args.train_dataset)
 

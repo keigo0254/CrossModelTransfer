@@ -84,7 +84,7 @@ def get_classification_head(args: Args, dataset: str) -> nn.Module:
     template = get_templates(dataset)
     classification_head: ClassificationHead = build_classification_head(
         model,
-        dataset,
+        dataset+"Val",
         template,
         args.dataset_root,
         args.device
