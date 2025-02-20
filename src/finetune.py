@@ -1,3 +1,4 @@
+import copy
 import os
 import random
 import time
@@ -159,7 +160,7 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
         ddp_train_loader.sampler.set_epoch(epoch)
         for i, batch in enumerate(ddp_train_loader):
             batch_start_time = time.time()
-            step = i // args.grad_accum_steps + epoch * train_num_batches // args.grad_accum_steps
+            train_step = i // args.grad_accum_steps + epoch * train_num_batches // args.grad_accum_steps
             batch = maybe_dictionarize(batch)
             inputs = batch["images"].to(rank)
             labels = batch["labels"].to(rank)
@@ -181,7 +182,7 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
             learning_rates.append(optimizer.param_groups[0]["lr"])
 
             if (i + 1) % args.grad_accum_steps == 0:
-                scheduler(step)
+                scheduler(train_step)
                 nn.utils.clip_grad_norm_(trainable_params, max_norm=1.0)
                 optimizer.step()
                 optimizer.zero_grad()
@@ -193,7 +194,7 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
                     f"Training on {args.train_dataset}\t Epoch: {epoch + 1}/{args.epochs}\t"
                     f"Batch: {i + 1}/{len(ddp_train_loader)} "
                     f"({percent_complete:.2f}%)\t"
-                    f"Step: {step + 1}/{args.epochs * train_num_batches // args.grad_accum_steps}\t"
+                    f"Step: {train_step + 1}/{args.epochs * train_num_batches // args.grad_accum_steps}\t"
                     f"Training Loss: {train_loss.item():.4f}\t"
                     f"Training Accuracy: {train_acc:.2%}\t"
                     f"Task Vector Norm: {norm:.4f}\t"
@@ -210,7 +211,7 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
         ddp_val_loader.sampler.set_epoch(epoch)
         with torch.no_grad():
             for i, batch in enumerate(ddp_val_loader):
-                step = i // args.grad_accum_steps + epoch * val_num_batches // args.grad_accum_steps
+                val_step = i // args.grad_accum_steps + epoch * val_num_batches // args.grad_accum_steps
                 batch_start_time = time.time()
                 batch = maybe_dictionarize(batch)
                 inputs = batch["images"].to(rank)
@@ -235,25 +236,26 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
                         f"Validation on {args.train_dataset}\t Epoch: {epoch + 1}/{args.epochs}\t"
                         f"Batch: {i + 1}/{len(ddp_val_loader)} "
                         f"({percent_complete:.2f}%)\t"
-                        f"Step: {step + 1}/{args.epochs * val_num_batches // args.grad_accum_steps}\t"
+                        f"Step: {val_step + 1}/{args.epochs * val_num_batches // args.grad_accum_steps}\t"
                         f"Validation Loss: {val_loss.item():.4f}\t"
                         f"Validation Accuracy: {val_acc:.2%}\t"
                         f"Validation Batch Time: {validation_batch_time:.2f}s", flush=True
                     )
 
             if args.save:
-                if step % 200 == 0:
+                if train_step % 200 == 0:
                     filename = os.path.join(
                         model_dir,
                         f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
                         f"rank_{args.rank}_alpha_{args.alpha}",
                         "finetune",
                         f"bs_{args.batch_size}_seed_{args.seed}",
-                        f"finetuned_task_vector_on_{args.train_dataset}_step_{step}.pt"
+                        f"finetuned_task_vector_on_{args.train_dataset}_step_{train_step}.pt"
                     )
+                    image_encoder = copy.deepcopy(ddp_classifier.module.image_encoder).to("cpu")
                     task_vector = TaskVector(
                         pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
-                        finetuned_checkpoint=ddp_classifier.module.image_encoder
+                        finetuned_checkpoint=image_encoder
                     )
                     task_vector.save_vector(filename)
 
