@@ -77,7 +77,9 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
             f"zeroshot_rank_{args.rank}.pt"
         )
         image_encoder.save(args.pretrained_model_path)
-    if args.finetuning_type != "full":
+    if args.finetuning_type == "full":
+        image_encoder.freeze_only_U()
+    else:
         image_encoder.freeze_pretrained_weight()
 
     classification_head = get_classification_head(args, args.train_dataset)
@@ -117,7 +119,7 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
     ddp_val_loader = distribute_loader(val_dataloader)
     ddp_classifier = torch.nn.parallel.DistributedDataParallel(
         classifier, device_ids=[rank],
-        find_unused_parameters=False, output_device=rank
+        find_unused_parameters=True, output_device=rank
     )
 
     # Watch the model

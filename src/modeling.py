@@ -210,6 +210,13 @@ class ImageEncoder(nn.Module):
             else:
                 param.requires_grad_(False)
 
+    def freeze_only_U(self):
+        for name, param in self.named_parameters():
+            if "Delta.U" in name:
+                param.requires_grad_(False)
+            else:
+                param.requires_grad_(True)
+
     def forward(self, images):
         assert self.model is not None
         return self.model.encode_image(images)
