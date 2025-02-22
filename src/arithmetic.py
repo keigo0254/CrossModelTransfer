@@ -12,7 +12,7 @@ from modeling import ImageEncoder
 from task_vectors import TaskVector
 
 
-def eval_task_vectors(pretrained_encoder: ImageEncoder, task_vector: TaskVector, args: Args) -> Dict[str, Dict[str, float]]:
+def eval_task_vectors(base_pretrained_encoder: ImageEncoder, task_vector: TaskVector, args: Args) -> Dict[str, Dict[str, float]]:
     """Evaluate the task vectors on the pretrained model."""
     print("=" * 100)
     print(f"Evaluating {args.pretrained_to_transfer} Task Vectors on {args.pretrained} pretrained model")
@@ -51,7 +51,7 @@ def eval_task_vectors(pretrained_encoder: ImageEncoder, task_vector: TaskVector,
             f"lambda_{coef}.jpg"
         )
 
-        image_encoder = task_vector.apply_to(pretrained_encoder, coef)
+        image_encoder = task_vector.apply_to(base_pretrained_encoder, coef)
 
         info[f"{coef}"] = evaluate(image_encoder, args)
         print(f"Average accuracy: {info[f'{coef}']['AVG.']:.2%}")
@@ -105,8 +105,8 @@ if __name__ == "__main__":
     )
 
     # Load pretrained model
-    pretrained_encoder = ImageEncoder(args, keep_lang=False)
-    pretrained_encoder.save(
+    base_pretrained_encoder = ImageEncoder(args, keep_lang=False)
+    base_pretrained_encoder.save(
         os.path.join(
             args.model_root,
             args.model_architecture,
@@ -115,13 +115,21 @@ if __name__ == "__main__":
             f"zeroshot_rank_{args.rank}.pt"
         )
     )
-    state_dict = pretrained_encoder.state_dict()
+    state_dict = base_pretrained_encoder.state_dict()
     for key in state_dict.keys():
         if "Delta.D" in key or "Delta.b" in key or "Delta.A" in key or "Delta.B" in key:
             state_dict[key] = torch.zeros_like(state_dict[key])
-    pretrained_encoder.load_state_dict(state_dict, strict=False)
+    base_pretrained_encoder.load_state_dict(state_dict, strict=False)
 
     # Load Task Vector
+    pretrained_encoder_path = os.path.join(
+        args.model_root,
+        args.model_architecture,
+        args.pretrained_to_transfer,
+        args.finetuning_type,
+        f"zeroshot_rank_{args.rank}.pt"
+    )
+    pretrained_encoder = ImageEncoder.load(pretrained_encoder_path)
     finetuned_encoders = [
         ImageEncoder.load(os.path.join(
             args.model_root,
@@ -155,5 +163,5 @@ if __name__ == "__main__":
         f"task_vector_for_{args.eval_datasets}.pt"
     ))
 
-    info = eval_task_vectors(pretrained_encoder, task_vector, args)
+    info = eval_task_vectors(base_pretrained_encoder, task_vector, args)
     plot_coef_vs_average_accuracy(info, args)

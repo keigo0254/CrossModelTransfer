@@ -65,7 +65,7 @@ class GaussianBlur:
 def get_augmented_preprocess_fn(
         preprocess: transforms,
         p: float = 1.0
-) -> transforms.Compose[List]:
+) -> transforms:
     """Create a preprocessing function with data augmentation using the given preprocess function."""
     mean = np.array(preprocess.transforms[3].mean)
     std = np.array(preprocess.transforms[3].std)
@@ -73,19 +73,31 @@ def get_augmented_preprocess_fn(
     mean2 = -1 * mean / std
     std2 = 1 / std
 
+    # return transforms.Compose([
+    #     *preprocess.transforms,
+    #     transforms.Normalize(mean2.tolist(), std2.tolist()),
+    #     transforms.ToPILImage(),
+    #     transforms.RandomCrop(224, padding=4, padding_mode='reflect'),
+    #     transforms.RandomHorizontalFlip(),
+    #     transforms.RandomChoice([
+    #         GrayScale(p),
+    #         Solarization(p),
+    #         GaussianBlur(p)
+    #     ]),
+    #     transforms.ToTensor(),
+    #     preprocess.transforms[-1]
+    # ])
     return transforms.Compose([
-        *preprocess.transforms,
-        transforms.Normalize(mean2.tolist(), std2.tolist()),
-        transforms.ToPILImage(),
-        transforms.RandomCrop(224, padding=4, padding_mode='reflect'),
+        preprocess.transforms[0],
+        preprocess.transforms[1],
         transforms.RandomHorizontalFlip(),
         transforms.RandomChoice([
-            GrayScale(p),
-            Solarization(p),
-            GaussianBlur(p)
+            GrayScale(p=1.0),
+            Solarization(p=1.0),
+            GaussianBlur(p=1.0)
         ]),
-        transforms.ToTensor(),
-        preprocess.transforms[-1]
+        preprocess.transforms[2],
+        preprocess.transforms[3]
     ])
 
 

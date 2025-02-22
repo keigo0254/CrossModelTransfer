@@ -58,9 +58,13 @@ class Args:
         default="full",
         help="Finetuning type"
     )
-    adjust_type: str = config(  # regularize, qr, cayley, reconstruct
+    adjust_type: str = config(  # fro, l2
         default="none",
         help="Adjust type"
+    )
+    dataset_type: str = config(  # cycle, mix, consecutive
+        default=None,
+        help="Dataset type"
     )
 
     # Dataset configurations

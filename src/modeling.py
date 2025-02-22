@@ -210,9 +210,11 @@ class ImageEncoder(nn.Module):
             else:
                 param.requires_grad_(False)
 
-    def freeze_only_U(self):
+    def freeze_pretrained_weight_and_unfreeze_Delta(self):
         for name, param in self.named_parameters():
-            if "Delta.U" in name:
+            if "Delta" in name:
+                param.requires_grad_(True)
+            elif "attn" in name and "proj" in name:
                 param.requires_grad_(False)
             else:
                 param.requires_grad_(True)
@@ -353,34 +355,3 @@ class MultiHeadImageClassifier(nn.Module):
     def load(cls, filename):
         print(f'Loading image classifier from {filename}')
         return utils.torch_load(filename)
-
-
-if __name__ == '__main__':
-    from eval import evaluate, eval_multihead_classifier
-    from heads import get_classification_head
-
-
-    args: Args = Args.from_args()
-    args.eval_datasets = [
-        "Cars", "DTD", "EuroSAT", "GTSRB",
-        "MNIST", "RESISC45", "SUN397", "SVHN",
-        "CIFAR10", "CIFAR100", "ImageNet", "STL10"
-    ]
-    args.finetuning_type = "lora"
-    args.rank = 4
-    args.alpha = 8
-    image_encoder = ImageEncoder(args, keep_lang=False)
-    for name, param in image_encoder.named_parameters():
-        print(name, param.requires_grad)
-    # for name, module in image_encoder.named_modules():
-    #     print(name, module)
-
-    # evaluate(image_encoder, args)
-
-    # classification_heads = {}
-    # for dataset in args.eval_datasets:
-    #     classification_head = get_classification_head(args, dataset)
-    #     classification_heads[dataset] = classification_head
-
-    # multi_head_image_classifier = MultiHeadImageClassifier(image_encoder, classification_heads)
-    # eval_multihead_classifier(multi_head_image_classifier, args)

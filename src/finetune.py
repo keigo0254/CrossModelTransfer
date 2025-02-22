@@ -78,7 +78,7 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
         )
         image_encoder.save(args.pretrained_model_path)
     if args.finetuning_type == "full":
-        image_encoder.freeze_only_U()
+        image_encoder.freeze_pretrained_weight_and_unfreeze_Delta()
     else:
         image_encoder.freeze_pretrained_weight()
 
