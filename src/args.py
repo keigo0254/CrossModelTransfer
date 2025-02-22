@@ -111,6 +111,10 @@ class Args:
         default=None,
         help="Scaling coefficient for task arithmetic"
     )
+    beta: float = config(
+        default=None,
+        help="Scaling coefficient for orthogonal finetuning"
+    )
     dropout: float = config(default=0.0, help="Dropout Rate")
 
     # Data related parameters

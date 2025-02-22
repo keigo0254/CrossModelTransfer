@@ -92,9 +92,9 @@ def get_augmented_preprocess_fn(
         preprocess.transforms[1],
         transforms.RandomHorizontalFlip(),
         transforms.RandomChoice([
-            GrayScale(p=1.0),
-            Solarization(p=1.0),
-            GaussianBlur(p=1.0)
+            GrayScale(p=p),
+            Solarization(p=p),
+            GaussianBlur(p=p)
         ]),
         preprocess.transforms[2],
         preprocess.transforms[3]

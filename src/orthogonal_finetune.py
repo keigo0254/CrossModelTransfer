@@ -19,7 +19,7 @@ from datasets.registry import get_dataset
 from distributed import cleanup_ddp, distribute_loader, setup_ddp
 from eval import evaluate
 from heads import get_classification_head
-from modeling import ImageClassifier, ImageEncoder
+from modeling import ImageClassifier, ImageEncoder, MultiHeadImageClassifier
 from task_vectors import TaskVector
 from utils import cosine_lr, LabelSmoothing
 
@@ -72,7 +72,8 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             group=f"orthogonal_finetune_{args.finetuning_type}",
             name=f"{args.model_architecture}_{args.pretrained}_{args.train_dataset}_{args.seed}",
             config=config_dict,
-            settings=wandb.Settings(start_method="thread")
+            settings=wandb.Settings(start_method="thread"),
+            mode="offline"
         )
 
     print("=" * 100)
@@ -155,24 +156,20 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             )
             
         total_train_time = 0.0
-        total_val_time = 0.0
         for epoch in range(args.epochs):
             train_losses = []
             train_ce_losses = []
             train_orth_losses = []
             train_accs = []
             training_batch_times = []
-            val_losses = []
-            val_ce_losses = []
-            val_orth_losses = []
-            val_accs = []
-            validation_batch_times = []
             task_vector_norms = []
             learning_rates = []
             for dataset_name in args.train_datasets:
                 args.train_dataset = dataset_name
                 classification_head = get_classification_head(args, dataset_name)
                 classifier = ImageClassifier(image_encoder, classification_head)
+                import eval
+                eval.evaluate(classifier.image_encoder, args)
                 classifier.freeze_head()
                 classifier = classifier.to(rank)
                 train_dataloader = get_dataloader(
@@ -181,14 +178,8 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                     args=args,
                     image_encoder=None
                 )
-                val_dataloader = get_dataloader(
-                    dataset_dict[dataset_name],
-                    is_train=False,
-                    args=args,
-                    image_encoder=None
-                )
+
                 train_num_batches = len(train_dataloader)
-                val_num_batches = len(val_dataloader)
 
                 scheduler = cosine_lr(
                     optimizer, args.lr, args.warmup_length,
@@ -196,7 +187,6 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                 )
 
                 ddp_train_loader = distribute_loader(train_dataloader)
-                ddp_val_loader = distribute_loader(val_dataloader)
                 ddp_classifier = torch.nn.parallel.DistributedDataParallel(
                     classifier, device_ids=[rank],
                     find_unused_parameters=False, output_device=rank
@@ -211,7 +201,6 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                     batch = maybe_dictionarize(batch)
                     inputs = batch["images"].to(rank)
                     labels = batch["labels"].to(rank).flatten()
-                    dataset_labels = batch["metadata"]
 
                     logits = ddp_classifier(inputs)
                     predictions = torch.argmax(logits, dim=1)
@@ -219,7 +208,7 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                     train_ce_loss = ce_loss_fn(logits, labels)
                     train_orth_loss = orth_loss_fn(ddp_classifier.module.image_encoder)
 
-                    train_loss = train_ce_loss + args.alpha * train_orth_loss
+                    train_loss = train_ce_loss + args.beta * train_orth_loss
                     train_loss.backward()
 
                     train_corrects = (predictions == labels).sum().item()
@@ -266,6 +255,7 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                                 "orthogonal_finetune",
                                 f"bs_{args.batch_size}_seed_{args.seed}",
                                 f"{args.train_datasets}",
+                                f"{args.dataset_type}",
                                 f"orthogonal_finetune_on_{args.train_dataset}_step_{train_step}.pt"
                             )
                             image_encoder = copy.deepcopy(ddp_classifier.module.image_encoder).to("cpu")
@@ -278,51 +268,6 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                 total_train_time += time.time() - epoch_train_start_time
                 print(f"\nEpoch: {epoch + 1} Training Time: {total_train_time:.2f}s\n")
 
-                # Validation
-                epoch_val_start_time = time.time()
-                ddp_classifier.eval()
-                ddp_val_loader.sampler.set_epoch(epoch)
-                with torch.no_grad():
-                    for i, batch in enumerate(ddp_val_loader):
-                        batch_start_time = time.time()
-                        val_step = i // args.grad_accum_steps + epoch * val_num_batches // args.grad_accum_steps
-                        batch = maybe_dictionarize(batch)
-                        inputs = batch["images"].to(rank)
-                        labels = batch["labels"].to(rank)
-
-                        logits = ddp_classifier(inputs)
-                        predictions = torch.argmax(logits, dim=1)
-
-                        val_ce_loss = ce_loss_fn(logits, labels)
-                        val_orth_loss = orth_loss_fn(ddp_classifier.module.image_encoder)
-                        val_loss = val_ce_loss + args.alpha * val_orth_loss
-                        val_losses.append(val_loss.item())
-                        val_ce_losses.append(val_ce_loss.item())
-                        val_orth_losses.append(val_orth_loss.item())
-
-                        val_corrects = (predictions == labels).sum().item()
-                        val_acc = val_corrects / len(labels)
-                        val_accs.append(val_acc)
-
-                        if (i + 1) % args.grad_accum_steps == 0:
-                            validation_batch_time = time.time() - batch_start_time
-                            validation_batch_times.append(validation_batch_time)
-                            percent_complete = 100 * i / len(ddp_val_loader)
-                            print(
-                                f"Validation on {args.train_dataset}\t Epoch: {epoch + 1}/{args.epochs}\t"
-                                f"Batch: {i + 1}/{len(ddp_val_loader)} "
-                                f"({percent_complete:.2f}%)\t"
-                                f"Step: {val_step + 1}/{args.epochs * val_num_batches // args.grad_accum_steps}\t"
-                                f"Validation Loss: {val_loss.item():.4f}\t"
-                                f"Validation CE Loss: {val_ce_loss.item():.4f}\t"
-                                f"Validation Orth Loss: {val_orth_loss.item():.4f}\t"
-                                f"Validation Accuracy: {val_acc:.2%}\t"
-                                f"Validation Batch Time: {validation_batch_time:.2f}s", flush=True
-                            )
-
-                total_val_time += time.time() - epoch_val_start_time
-                print(f"\nEpoch: {epoch + 1} Validation Time: {total_val_time:.2f}s\n")
-
                 if args.wandb:
                     run.log({
                         "Epoch": epoch + 1,
@@ -332,27 +277,223 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                         "Training Accuracy": np.mean(train_accs),
                         "Task Vector Norm": np.mean(task_vector_norms),
                         "Learning Rate": np.mean(learning_rates),
-                        "Validation Loss": np.mean(val_losses),
-                        "Validation CE Loss": np.mean(val_ce_losses),
-                        "Validation Orth Loss": np.mean(val_orth_losses),
-                        "Validation Accuracy": np.mean(val_accs),
                         "Training Batch Time": np.mean(training_batch_times),
-                        "Validation Batch Time": np.mean(validation_batch_times)
                     })
 
         print(f"Completed Training in {total_train_time:.2f}s")
-        print(f"Completed Validation in {total_val_time:.2f}s")
         if args.wandb:
             run.log({
                 "Total Training Time": total_train_time,
-                "Total Validation Time": total_val_time
             })
 
     elif args.dataset_type == "mix":
-        pass
-    elif args.dataset_type == "consecutive":
-        pass
+        classification_heads = [
+            get_classification_head(args, dataset_name)
+            for dataset_name in args.train_datasets
+        ]
+        multihead_classifier = MultiHeadImageClassifier(
+            image_encoder, classification_heads
+        )
+        multihead_classifier.freeze_head()
+        multihead_classifier = multihead_classifier.to(rank)
 
+        train_dataset = MixedDataset(
+            args.train_datasets, args.dataset_root,
+            args.num_images, args.num_augments, preprocess_fn
+        )
+        train_dataloader = torch.utils.data.DataLoader(
+            train_dataset, batch_size=args.batch_size, shuffle=True,
+            num_workers=args.num_workers, pin_memory=True
+        )
+
+        train_num_batches = len(train_dataloader)
+
+        scheduler = cosine_lr(
+            optimizer, args.lr, args.warmup_length,
+            args.epochs * train_num_batches // args.grad_accum_steps
+        )
+
+        ddp_train_loader = distribute_loader(train_dataloader)
+        ddp_classifier = torch.nn.parallel.DistributedDataParallel(
+            multihead_classifier, device_ids=[rank],
+            find_unused_parameters=False, output_device=rank
+        )
+
+        epoch_train_start_time = time.time()
+        ddp_classifier.train()
+        ddp_train_loader.sampler.set_epoch(epoch)
+        for epoch in range(args.epochs):
+            train_losses = []
+            train_ce_losses = []
+            train_orth_losses = []
+            train_accs = []
+            training_batch_times = []
+            for i, batch in enumerate(ddp_train_loader):
+                batch_start_time = time.time()
+                train_step = i // args.grad_accum_steps + epoch * train_num_batches // args.grad_accum_steps
+                batch = maybe_dictionarize(batch)
+                inputs = batch["images"].to(rank)
+                labels = batch["labels"].to(rank)
+                dataset_labels = batch["metadata"]
+
+                logits = ddp_classifier(inputs)
+                for i, (label, name) in enumerate(zip(labels, dataset_labels)):
+                    pred = logits[name][i].argmax(dim=0, keepdim=True).to(rank)
+                    train_corrects += pred.eq(label.view_as(pred)).sum().item()
+
+                train_ce_loss = ce_loss_fn(logits, labels)
+                train_orth_loss = orth_loss_fn(ddp_classifier.module.image_encoder)
+
+                train_loss = train_ce_loss + args.beta * train_orth_loss
+                train_loss.backward()
+
+                train_acc = train_corrects / len(labels)
+
+                train_losses.append(train_loss.item())
+                train_ce_losses.append(train_ce_loss.item())
+                train_orth_losses.append(train_orth_loss.item())
+                train_accs.append(train_acc)
+
+                if (i + 1) % args.grad_accum_steps == 0:
+                    scheduler(train_step)
+                    nn.utils.clip_grad_norm_(params, max_norm=1.0)
+                    optimizer.step()
+                    optimizer.zero_grad()
+
+                    training_batch_time = time.time() - batch_start_time
+                    training_batch_times.append(training_batch_time)
+                    percent_complete = 100 * i / len(ddp_train_loader)
+                    print(
+                        f"Training on {args.train_dataset}\t Epoch: {epoch + 1}/{args.epochs}\t"
+                        f"Batch: {i + 1}/{len(ddp_train_loader)} "
+                        f"({percent_complete:.2f}%)\t"
+                        f"Step: {train_step + 1}/{args.epochs * train_num_batches // args.grad_accum_steps}\t"
+                        f"Training Loss: {train_loss.item():.4f}\t"
+                        f"Training CE Loss: {train_ce_loss.item():.4f}\t"
+                        f"Training Orth Loss: {train_orth_loss.item():.4f}\t"
+                        f"Training Accuracy: {train_acc:.2%}\t"
+                        f"Training Batch Time: {training_batch_time:.2f}s", flush=True
+                    )
+
+                if args.save:
+                    if train_step % 200 == 0:
+                        filename = os.path.join(
+                            model_dir,
+                            f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
+                            f"rank_{args.rank}_alpha_{args.alpha}",
+                            "orthogonal_finetune",
+                            f"bs_{args.batch_size}_seed_{args.seed}",
+                            f"{args.train_datasets}",
+                            f"{args.dataset_type}",
+                            f"orthogonal_finetune_on_{args.train_dataset}_step_{train_step}.pt"
+                        )
+                        image_encoder = copy.deepcopy(ddp_classifier.module.image_encoder).to("cpu")
+                        task_vector = TaskVector(
+                            pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
+                            finetuned_checkpoint=image_encoder
+                        )
+                        task_vector.save_vector(filename)
+
+        total_train_time += time.time() - epoch_train_start_time
+        print(f"\nEpoch: {epoch + 1} Training Time: {total_train_time:.2f}s\n")
+
+    elif args.dataset_type == "consecutive":
+        for dataset_name in args.train_datasets:
+            args.train_dataset = dataset_name
+            classification_head = get_classification_head(args, dataset_name)
+            classifier = ImageClassifier(image_encoder, classification_head)
+            classifier.freeze_head()
+            classifier = classifier.to(rank)
+    
+            train_dataset = get_dataset(
+                dataset_name, preprocess_fn, args.dataset_root,
+                args.batch_size, args.num_workers
+            )
+            train_dataloader = get_dataloader(
+                train_dataset, is_train=True, args=args, image_encoder=None
+            )
+
+            train_num_batches = len(train_dataloader)
+
+            scheduler = cosine_lr(
+                optimizer, args.lr, args.warmup_length,
+                args.epochs * train_num_batches // args.grad_accum_steps
+            )
+
+            ddp_train_loader = distribute_loader(train_dataloader)
+            ddp_classifier = torch.nn.parallel.DistributedDataParallel(
+                classifier, device_ids=[rank],
+                find_unused_parameters=False, output_device=rank
+            )
+
+            epoch_train_start_time = time.time()
+            ddp_classifier.train()
+            ddp_train_loader.sampler.set_epoch(epoch)
+            for i, batch in enumerate(ddp_train_loader):
+                batch = maybe_dictionarize(batch)
+                inputs = batch["images"].to(rank)
+                labels = batch["labels"].to(rank)
+                
+                logits = ddp_classifier(inputs)
+                predictions = torch.argmax(logits, dim=1)
+
+                train_ce_loss = ce_loss_fn(logits, labels)
+                train_orth_loss = orth_loss_fn(ddp_classifier.module.image_encoder)
+
+                train_loss = train_ce_loss + args.beta * train_orth_loss
+                train_loss.backward()
+
+                train_corrects = (predictions == labels).sum().item()
+                train_acc = train_corrects / len(labels)
+
+                train_losses.append(train_loss.item())
+                train_ce_losses.append(train_ce_loss.item())
+                train_orth_losses.append(train_orth_loss.item())
+                train_accs.append(train_acc)
+
+                if (i + 1) % args.grad_accum_steps == 0:
+                    scheduler(train_step)
+                    nn.utils.clip_grad_norm_(params, max_norm=1.0)
+                    optimizer.step()
+                    optimizer.zero_grad()
+
+                    training_batch_time = time.time() - batch_start_time
+                    training_batch_times.append(training_batch_time)
+                    percent_complete = 100 * i / len(ddp_train_loader)
+                    print(
+                        f"Training on {args.train_dataset}\t Epoch: {epoch + 1}/{args.epochs}\t"
+                        f"Batch: {i + 1}/{len(ddp_train_loader)} "
+                        f"({percent_complete:.2f}%)\t"
+                        f"Step: {train_step + 1}/{args.epochs * train_num_batches // args.grad_accum_steps}\t"
+                        f"Training Loss: {train_loss.item():.4f}\t"
+                        f"Training CE Loss: {train_ce_loss.item():.4f}\t"
+                        f"Training Orth Loss: {train_orth_loss.item():.4f}\t"
+                        f"Training Accuracy: {train_acc:.2%}\t"
+                        f"Training Batch Time: {training_batch_time:.2f}s", flush=True
+                    )
+
+                if args.save:
+                    if train_step % 200 == 0:
+                        filename = os.path.join(
+                            model_dir,
+                            f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
+                            f"rank_{args.rank}_alpha_{args.alpha}",
+                            "orthogonal_finetune",
+                            f"bs_{args.batch_size}_seed_{args.seed}",
+                            f"{args.train_datasets}",
+                            f"{args.dataset_type}",
+                            f"orthogonal_finetune_on_{args.train_dataset}_step_{train_step}.pt"
+                        )
+                        image_encoder = copy.deepcopy(ddp_classifier.module.image_encoder).to("cpu")
+                        task_vector = TaskVector(
+                            pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
+                            finetuned_checkpoint=image_encoder
+                        )
+                        task_vector.save_vector(filename)
+
+        total_train_time += time.time() - epoch_train_start_time
+        print(f"\nEpoch: {epoch + 1} Training Time: {total_train_time:.2f}s\n")
+            
     # Save the finetuned model
     if args.save:
         filename = os.path.join(
