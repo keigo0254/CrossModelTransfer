@@ -502,7 +502,9 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             f"rank_{args.rank}_alpha_{args.alpha}",
             "orthogonal_finetune",
             f"bs_{args.batch_size}_seed_{args.seed}",
-            f"orthogonal_finetuned_image_encoder_on_{args.train_dataset}.pt"
+            f"{args.train_datasets}",
+            f"{args.dataset_type}",
+            f"orthogonal_finetuned_image_encoder_on_{args.train_datasets}_for_epochs_{args.epochs}.pt"
         )
         image_encoder = ImageEncoder(args, keep_lang=False)
         state_dict = ddp_classifier.module.image_encoder.model.state_dict()
@@ -519,7 +521,9 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             f"rank_{args.rank}_alpha_{args.alpha}",
             "orthogonal_finetune",
             f"bs_{args.batch_size}_seed_{args.seed}",
-            f"orthogonal_finetuned_task_vector_on_{args.train_dataset}.pt"
+            f"{args.train_datasets}",
+            f"{args.dataset_type}",
+            f"orthogonal_finetuned_task_vector_on_{args.train_datasets}_for_epochs_{args.epochs}.pt"
         )
         task_vector.save_vector(filename)
 
@@ -555,5 +559,32 @@ if __name__ == "__main__":
     torch.manual_seed(SEED)
     torch.cuda.manual_seed(SEED)
     torch.backends.cudnn.deterministic = True
+
+    args.result = os.path.join(
+        args.result_root,
+        args.model_architecture,
+        args.pretrained,
+        args.finetuning_type,
+        f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
+        f"rank_{args.rank}_alpha_{args.alpha}",
+        "orthogonal_finetune",
+        f"bs_{args.batch_size}_seed_{args.seed}",
+        f"{args.train_datasets}",
+        f"{args.dataset_type}",
+        f"orthogonal_finetuned_on_{args.train_datasets}_for_epochs_{args.epochs}.json"
+    )
+    args.fig = os.path.join(
+        args.fig_root,
+        args.model_architecture,
+        args.pretrained,
+        args.finetuning_type,
+        f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
+        f"rank_{args.rank}_alpha_{args.alpha}",
+        "orthogonal_finetune",
+        f"bs_{args.batch_size}_seed_{args.seed}",
+        f"{args.train_datasets}",
+        f"{args.dataset_type}",
+        f"orthogonal_finetuned_on_{args.train_datasets}_for_epochs_{args.epochs}.jpg"
+    )
 
     torch.multiprocessing.spawn(orthogonal_finetune, args=(args,), nprocs=args.world_size)
