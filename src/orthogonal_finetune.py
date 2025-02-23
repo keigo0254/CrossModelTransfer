@@ -168,8 +168,6 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                 args.train_dataset = dataset_name
                 classification_head = get_classification_head(args, dataset_name)
                 classifier = ImageClassifier(image_encoder, classification_head)
-                import eval
-                eval.evaluate(classifier.image_encoder, args)
                 classifier.freeze_head()
                 classifier = classifier.to(rank)
                 train_dataloader = get_dataloader(
@@ -496,6 +494,8 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             
     # Save the finetuned model
     if args.save:
+        if args.wandb:
+            wandb.unwatch(ddp_classifier.module.image_encoder)
         filename = os.path.join(
             model_dir,
             f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
@@ -504,10 +504,14 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             f"bs_{args.batch_size}_seed_{args.seed}",
             f"orthogonal_finetuned_image_encoder_on_{args.train_dataset}.pt"
         )
-        ddp_classifier.module.image_encoder.save(filename)
+        image_encoder = ImageEncoder(args, keep_lang=False)
+        state_dict = ddp_classifier.module.image_encoder.model.state_dict()
+        image_encoder.model.load_state_dict(state_dict)
+        image_encoder.save(filename)
+        # ddp_classifier.module.image_encoder.save(filename)
         task_vector = TaskVector(
             pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
-            finetuned_checkpoint=ddp_classifier.module.image_encoder
+            finetuned_checkpoint=image_encoder
         )
         filename = os.path.join(
             model_dir,
