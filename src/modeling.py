@@ -212,9 +212,9 @@ class ImageEncoder(nn.Module):
 
     def freeze_pretrained_weight_and_unfreeze_Delta(self):
         for name, param in self.named_parameters():
-            if "Delta" in name:
+            if "Delta" in name and "U" not in name:
                 param.requires_grad_(True)
-            elif "attn" in name and "proj" in name:
+            elif ("attn" in name and "proj" in name) or "U" in name:
                 param.requires_grad_(False)
             else:
                 param.requires_grad_(True)
