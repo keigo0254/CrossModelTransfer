@@ -73,7 +73,6 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             name=f"{args.model_architecture}_{args.pretrained}_{args.train_dataset}_{args.seed}",
             config=config_dict,
             settings=wandb.Settings(start_method="thread"),
-            mode="offline"
         )
 
     print("=" * 100)
