@@ -117,7 +117,7 @@ if __name__ == "__main__":
     )
     state_dict = base_pretrained_encoder.state_dict()
     for key in state_dict.keys():
-        if "Delta.D" in key or "Delta.b" in key or "Delta.A" in key or "Delta.B" in key:
+        if "Delta" in key:
             state_dict[key] = torch.zeros_like(state_dict[key])
     base_pretrained_encoder.load_state_dict(state_dict, strict=False)
 
