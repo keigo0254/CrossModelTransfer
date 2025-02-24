@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from args import Args
-from delta import Linear
+from delta import Linear, LoRALayer
 import utils
 from utils import get_submodules
 
@@ -219,6 +219,10 @@ class ImageEncoder(nn.Module):
             else:
                 param.requires_grad_(True)
 
+    def randomize_U(self):
+        for name, module in self.named_modules():
+            if isinstance(module, LoRALayer):
+                module.randomize()
     def forward(self, images):
         assert self.model is not None
         return self.model.encode_image(images)

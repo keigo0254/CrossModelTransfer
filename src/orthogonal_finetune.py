@@ -107,8 +107,21 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             f"task_vector_for_{args.train_datasets}.pt"
     ))
 
+    if args.model_vector:
+        model_vector = TaskVector.load_vector(os.path.join(
+            args.model_root,
+            args.model_architecture,
+            args.pretrained_to_transfer,
+            args.finetuning_type,
+            f"model_vector_from_{args.pretrained_to_transfer}_to_{args.pretrained}_rank_{args.rank}.pt"
+        ))
+        task_vector = task_vector + model_vector
+
     image_encoder: ImageEncoder = task_vector.apply_to(image_encoder, args.lamb)
     image_encoder.freeze_except_U()
+
+    if args.randomize:
+        image_encoder.randomize_U()
 
     if args.wandb:
         wandb.watch(image_encoder, log="all", log_freq=250)
@@ -253,7 +266,7 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                                 f"bs_{args.batch_size}_seed_{args.seed}",
                                 f"{args.train_datasets}",
                                 f"{args.dataset_type}",
-                                f"orthogonal_finetune_on_{args.train_dataset}_step_{train_step}.pt"
+                                f"orthogonal_finetune_on_{args.train_dataset}_step_{train_step}_model_vector_{args.model_vector}.pt"
                             )
                             image_encoder = copy.deepcopy(ddp_classifier.module.image_encoder).to("cpu")
                             task_vector = TaskVector(
@@ -382,7 +395,8 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                             f"bs_{args.batch_size}_seed_{args.seed}",
                             f"{args.train_datasets}",
                             f"{args.dataset_type}",
-                            f"orthogonal_finetune_on_{args.train_dataset}_step_{train_step}.pt"
+                            f"randomize_{args.randomize}",
+                            f"orthogonal_finetune_on_{args.train_dataset}_step_{train_step}_model_vector_{args.model_vector}.pt"
                         )
                         image_encoder = copy.deepcopy(ddp_classifier.module.image_encoder).to("cpu")
                         task_vector = TaskVector(
@@ -479,7 +493,8 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                             f"bs_{args.batch_size}_seed_{args.seed}",
                             f"{args.train_datasets}",
                             f"{args.dataset_type}",
-                            f"orthogonal_finetune_on_{args.train_dataset}_step_{train_step}.pt"
+                            f"randomize_{args.randomize}",
+                            f"orthogonal_finetune_on_{args.train_dataset}_step_{train_step}_model_vector_{args.model_vector}.pt"
                         )
                         image_encoder = copy.deepcopy(ddp_classifier.module.image_encoder).to("cpu")
                         task_vector = TaskVector(
@@ -503,7 +518,8 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             f"bs_{args.batch_size}_seed_{args.seed}",
             f"{args.train_datasets}",
             f"{args.dataset_type}",
-            f"orthogonal_finetuned_image_encoder_on_{args.train_datasets}_for_epochs_{args.epochs}.pt"
+            f"randomize_{args.randomize}",
+            f"orthogonal_finetuned_image_encoder_on_{args.train_datasets}_for_epochs_{args.epochs}_model_vector_{args.model_vector}.pt"
         )
         image_encoder = ImageEncoder(args, keep_lang=False)
         state_dict = ddp_classifier.module.image_encoder.model.state_dict()
@@ -522,7 +538,8 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             f"bs_{args.batch_size}_seed_{args.seed}",
             f"{args.train_datasets}",
             f"{args.dataset_type}",
-            f"orthogonal_finetuned_task_vector_on_{args.train_datasets}_for_epochs_{args.epochs}.pt"
+            f"randomize_{args.randomize}",
+            f"orthogonal_finetuned_task_vector_on_{args.train_datasets}_for_epochs_{args.epochs}_model_vector_{args.model_vector}.pt"
         )
         task_vector.save_vector(filename)
 
@@ -570,7 +587,8 @@ if __name__ == "__main__":
         f"bs_{args.batch_size}_seed_{args.seed}",
         f"{args.train_datasets}",
         f"{args.dataset_type}",
-        f"orthogonal_finetuned_on_{args.train_datasets}_for_epochs_{args.epochs}.json"
+        f"randomize_{args.randomize}",
+        f"orthogonal_finetuned_on_{args.train_datasets}_for_epochs_{args.epochs}_model_vector_{args.model_vector}.json"
     )
     args.fig = os.path.join(
         args.fig_root,
@@ -583,7 +601,8 @@ if __name__ == "__main__":
         f"bs_{args.batch_size}_seed_{args.seed}",
         f"{args.train_datasets}",
         f"{args.dataset_type}",
-        f"orthogonal_finetuned_on_{args.train_datasets}_for_epochs_{args.epochs}.jpg"
+        f"randomize_{args.randomize}",
+        f"orthogonal_finetuned_on_{args.train_datasets}_for_epochs_{args.epochs}_model_vector_{args.model_vector}.jpg"
     )
 
     torch.multiprocessing.spawn(orthogonal_finetune, args=(args,), nprocs=args.world_size)

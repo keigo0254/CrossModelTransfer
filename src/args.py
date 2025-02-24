@@ -116,6 +116,14 @@ class Args:
         help="Scaling coefficient for orthogonal finetuning"
     )
     dropout: float = config(default=0.0, help="Dropout Rate")
+    randomize: bool = config(
+        default=False,
+        help="Randomize U"
+    )
+    model_vector: bool = config(
+        default=False,
+        help="Whether to use model vector"
+    )
 
     # Data related parameters
     num_images: int = config(default=None, help="Number of images")

@@ -130,6 +130,11 @@ if __name__ == "__main__":
         f"zeroshot_rank_{args.rank}.pt"
     )
     pretrained_encoder = ImageEncoder.load(pretrained_encoder_path)
+    state_dict = pretrained_encoder.state_dict()
+    for key in state_dict.keys():
+        if "Delta.D" in key or "Delta.U" in key:
+            state_dict[key] = torch.zeros_like(state_dict[key])
+    pretrained_encoder.load_state_dict(state_dict, strict=False)
     finetuned_encoders = [
         ImageEncoder.load(os.path.join(
             args.model_root,
