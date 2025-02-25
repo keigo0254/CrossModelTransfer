@@ -1,8 +1,9 @@
+import copy
 import os
 import random
 from typing import Dict
 
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
@@ -33,7 +34,7 @@ def eval_task_vectors(base_pretrained_encoder: ImageEncoder, task_vector: TaskVe
             args.finetuning_type,
             f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
             f"rank_{args.rank}_alpha_{args.alpha}",
-            f"arithmetic_on_{args.pretrained}",
+            f"orthogonal_procrustes_on_{args.pretrained}",
             f"bs_{args.batch_size}_seed_{args.seed}",
             f"{args.eval_datasets}",
             f"lambda_{coef}.json"
@@ -45,7 +46,7 @@ def eval_task_vectors(base_pretrained_encoder: ImageEncoder, task_vector: TaskVe
             args.finetuning_type,
             f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
             f"rank_{args.rank}_alpha_{args.alpha}",
-            f"arithmetic_on_{args.pretrained}",
+            f"orthogonal_procrustes_on_{args.pretrained}",
             f"bs_{args.batch_size}_seed_{args.seed}",
             f"{args.eval_datasets}",
             f"lambda_{coef}.jpg"
@@ -75,7 +76,7 @@ def plot_coef_vs_average_accuracy(info: Dict[str, Dict[str, float]], args: Args)
         args.finetuning_type,
         f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
         f"rank_{args.rank}_alpha_{args.alpha}",
-        f"arithmetic_on_{args.pretrained}",
+        f"orthogonal_procrustes_on_{args.pretrained}",
         f"bs_{args.batch_size}_seed_{args.seed}",
         f"{args.eval_datasets}",
         f"coef_vs_average_accuracy.jpg"
@@ -84,8 +85,40 @@ def plot_coef_vs_average_accuracy(info: Dict[str, Dict[str, float]], args: Args)
     plt.close()
 
 
-if __name__ == "__main__":
-    args: Args = Args().from_args()
+def calculate_orthogonal_procrustes(W_1: torch.Tensor, W_2: torch.Tensor):
+    U, _, Vh = torch.linalg.svd(W_1.T @ W_2)
+    D = torch.eye(U.shape[0], device=U.device, dtype=U.dtype)
+    D[-1, -1] = torch.linalg.det(U @ Vh)
+    return U @ D @ Vh
+
+
+def orthogonal_procrustes(
+    image_encoder_1: ImageEncoder,
+    image_encoder_2: ImageEncoder,
+    task_vector: TaskVector,
+):
+    state_dict_1 = image_encoder_1.state_dict()
+    state_dict_2 = image_encoder_2.state_dict()
+    for key in state_dict_1.keys():
+        if "Delta" in key:
+            if "D" in key:
+                W_1 = state_dict_1[key]
+                W_2 = state_dict_2[key]
+            elif "B" in key:
+                W_1 = state_dict_1[key] @ state_dict_1[key.replace("B", "A")]
+                W_2 = state_dict_2[key] @ state_dict_2[key.replace("B", "A")]
+            else:
+                continue
+            W_1 = W_1.to(torch.float64)
+            W_2 = W_2.to(torch.float64)
+            R = calculate_orthogonal_procrustes(W_1, W_2)
+
+            task_vector.vector[key] = R @ task_vector.vector[key]
+    return task_vector
+
+
+def main():
+    args = Args()
     assert args.eval_datasets is not None, "Evaluation datasets must be specified"
     if args.finetuning_type != "lora":
         args.rank = 0
@@ -104,7 +137,6 @@ if __name__ == "__main__":
         if args.lamb is None else [args.lamb]
     )
 
-    # Load pretrained model
     base_pretrained_encoder = ImageEncoder(args, keep_lang=False)
     base_pretrained_encoder.save(
         os.path.join(
@@ -121,7 +153,6 @@ if __name__ == "__main__":
             state_dict[key] = torch.zeros_like(state_dict[key])
     base_pretrained_encoder.load_state_dict(state_dict, strict=False)
 
-    # Load Task Vector
     pretrained_encoder_path = os.path.join(
         args.model_root,
         args.model_architecture,
@@ -135,31 +166,8 @@ if __name__ == "__main__":
         if "Delta.D" in key or "Delta.U" in key:
             state_dict[key] = torch.zeros_like(state_dict[key])
     pretrained_encoder.load_state_dict(state_dict, strict=False)
-    finetuned_encoders = [
-        ImageEncoder.load(os.path.join(
-            args.model_root,
-            args.model_architecture,
-            args.pretrained_to_transfer,
-            args.finetuning_type,
-            f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
-            f"rank_{args.rank}_alpha_{args.alpha}",
-            "finetune",
-            f"bs_{args.batch_size}_seed_{args.seed}",
-            f"finetuned_image_encoder_on_{dataset_name}.pt"
-        ))
-        for dataset_name in args.eval_datasets
-    ]
-    task_vector = sum([
-        TaskVector(
-            pretrained_checkpoint=pretrained_encoder,
-            finetuned_checkpoint=finetuned_encoder
-        )
-        for finetuned_encoder in finetuned_encoders
-    ])
-    for key in task_vector.vector.keys():
-        if "Delta.U" in key:
-            task_vector.vector[key] = task_vector.vector[key] / len(finetuned_encoders)
-    task_vector.save_vector(os.path.join(
+
+    task_vector = TaskVector.load_vector(os.path.join(
         args.model_root,
         args.model_architecture,
         args.pretrained_to_transfer,
@@ -171,5 +179,25 @@ if __name__ == "__main__":
         f"task_vector_for_{args.eval_datasets}.pt"
     ))
 
-    info = eval_task_vectors(base_pretrained_encoder, task_vector, args)
-    plot_coef_vs_average_accuracy(info, args)
+    task_vector = orthogonal_procrustes(
+        base_pretrained_encoder,
+        pretrained_encoder,
+        task_vector
+    )
+    task_vector.save_vector(os.path.join(
+        args.model_root,
+        args.model_architecture,
+        args.pretrained_to_transfer,
+        args.finetuning_type,
+        f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
+        f"rank_{args.rank}_alpha_{args.alpha}",
+        "task_vector",
+        f"bs_{args.batch_size}_seed_{args.seed}",
+        f"orthogonal_procrustes_task_vector_for_{args.eval_datasets}.pt"
+    ))
+
+
+
+
+if __name__ == "__main__":
+    main()

@@ -1,13 +1,87 @@
 import os
 import random
+from typing import Dict
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from arithmetic import eval_task_vectors, plot_coef_vs_average_accuracy
 from args import Args
+from eval import evaluate
 from modeling import ImageEncoder
 from task_vectors import TaskVector
+
+
+def eval_task_vectors(base_pretrained_encoder: ImageEncoder, task_vector: TaskVector, args: Args) -> Dict[str, Dict[str, float]]:
+    """Evaluate the task vectors on the pretrained model."""
+    print("=" * 100)
+    print(f"Evaluating {args.pretrained_to_transfer} Task Vectors on {args.pretrained} pretrained model")
+    print("=" * 100)
+    print(f"Using Device: {args.device}")
+
+    info = {}
+
+    for coef in args.lamb:
+        print("-" * 100)
+        print(f"Evaluating with lambda = {coef}")
+        print("-" * 100)
+
+        args.result = os.path.join(
+            args.result_root,
+            args.model_architecture,
+            args.pretrained_to_transfer,
+            args.finetuning_type,
+            f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
+            f"rank_{args.rank}_alpha_{args.alpha}",
+            f"model_vector_on_{args.pretrained}",
+            f"bs_{args.batch_size}_seed_{args.seed}",
+            f"{args.eval_datasets}",
+            f"lambda_{coef}.json"
+        )
+        args.fig = os.path.join(
+            args.fig_root,
+            args.model_architecture,
+            args.pretrained_to_transfer,
+            args.finetuning_type,
+            f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
+            f"rank_{args.rank}_alpha_{args.alpha}",
+            f"model_vector_on_{args.pretrained}",
+            f"bs_{args.batch_size}_seed_{args.seed}",
+            f"{args.eval_datasets}",
+            f"lambda_{coef}.jpg"
+        )
+
+        image_encoder = task_vector.apply_to(base_pretrained_encoder, coef)
+
+        info[f"{coef}"] = evaluate(image_encoder, args)
+        print(f"Average accuracy: {info[f'{coef}']['AVG.']:.2%}")
+
+    return info
+
+
+def plot_coef_vs_average_accuracy(info: Dict[str, Dict[str, float]], args: Args) -> None:
+    """Plot the coefficient vs average accuracy."""
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.plot(info.keys(), [info[coef]['AVG.'] for coef in info.keys()])
+    ax.set_ylim(0, 1.05)
+    ax.set_xlabel("Coefficient")
+    ax.set_ylabel("Average Accuracy")
+    ax.set_title(f"Coefficient vs Average Accuracy for {args.pretrained_to_transfer} on {args.pretrained}")
+    ax.grid(True)
+    filename = os.path.join(
+        args.fig_root,
+        args.model_architecture,
+        args.pretrained_to_transfer,
+        args.finetuning_type,
+        f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
+        f"rank_{args.rank}_alpha_{args.alpha}",
+        f"model_vector_on_{args.pretrained}",
+        f"bs_{args.batch_size}_seed_{args.seed}",
+        f"{args.eval_datasets}",
+        f"coef_vs_average_accuracy.jpg"
+    )
+    plt.savefig(filename)
+    plt.close()
 
 
 if __name__ == "__main__":

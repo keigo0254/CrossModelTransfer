@@ -65,11 +65,14 @@ class LoRALayer(nn.Module):
     def forward(self, inputs: torch.Tensor):
         if self.r > 0:
             return F.linear(inputs, self.U.T @ self.B @ self.A @ self.U) * self.alpha / self.r
+            # return F.linear(inputs, self.B @ self.A) * self.alpha / self.r
         else:
             if self.bias:
                 return F.linear(inputs, self.U.T @ self.D @ self.U, self.b)
+                # return F.linear(inputs, self.D, self.b)
             else:
                 return F.linear(inputs, self.U.T @ self.D @ self.U)
+                # return F.linear(inputs, self.D)
 
     def __repr__(self):
         return f'LoRALayer(in_features={self.in_features}, out_features={self.out_features}, r={self.r}, alpha={self.alpha})'
@@ -100,22 +103,3 @@ class Linear(nn.Linear):
 
     def forward(self, inputs: torch.Tensor):
         return super().forward(inputs) + self.Delta(inputs)
-
-
-if __name__ == "__main__":
-    bias_linear = Linear(10, 10, bias=nn.Parameter(torch.zeros(10)))
-    for key, param in bias_linear.named_parameters():
-        print(key, param.shape)
-    print()
-    non_bias_linear = Linear(10, 10)
-    for key, param in non_bias_linear.named_parameters():
-        print(key, param.shape)
-    print()
-    lora_linear = Linear(10, 10, r=4, alpha=8)
-    for key, param in lora_linear.named_parameters():
-        print(key, param.shape)
-    print()
-    x = torch.randn(10)
-    print(bias_linear(x))
-    print(non_bias_linear(x))
-    print(lora_linear(x))
