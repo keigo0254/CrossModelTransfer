@@ -62,7 +62,7 @@ def eval_task_vectors(base_pretrained_encoder: ImageEncoder, task_vector: TaskVe
 def plot_coef_vs_average_accuracy(info: Dict[str, Dict[str, float]], args: Args) -> None:
     """Plot the coefficient vs average accuracy."""
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(info.keys(), [info[coef]['AVG.'] for coef in info.keys()])
+    ax.plot(info.keys(), [info[coef]['AVG.'] for coef in info.keys()], marker='o')
     ax.set_ylim(0, 1.05)
     ax.set_xlabel("Coefficient")
     ax.set_ylabel("Average Accuracy")
