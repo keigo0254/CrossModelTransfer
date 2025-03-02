@@ -36,6 +36,7 @@ def eval_task_vectors(base_pretrained_encoder: ImageEncoder, task_vector: TaskVe
             f"arithmetic_on_{args.pretrained}",
             f"bs_{args.batch_size}_seed_{args.seed}",
             f"{args.eval_datasets}",
+            "accuracy",
             f"lambda_{coef}.json"
         )
         args.fig = os.path.join(
@@ -48,6 +49,7 @@ def eval_task_vectors(base_pretrained_encoder: ImageEncoder, task_vector: TaskVe
             f"arithmetic_on_{args.pretrained}",
             f"bs_{args.batch_size}_seed_{args.seed}",
             f"{args.eval_datasets}",
+            "accuracy",
             f"lambda_{coef}.jpg"
         )
 
@@ -78,7 +80,7 @@ def plot_coef_vs_average_accuracy(info: Dict[str, Dict[str, float]], args: Args)
         f"arithmetic_on_{args.pretrained}",
         f"bs_{args.batch_size}_seed_{args.seed}",
         f"{args.eval_datasets}",
-        f"coef_vs_average_accuracy.jpg"
+        "coef_vs_average_accuracy.jpg"
     )
     plt.savefig(filename)
     plt.close()

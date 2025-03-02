@@ -1,7 +1,5 @@
 import random
-from typing import List
 
-import numpy as np
 from PIL import ImageFilter, ImageOps, Image
 import torchvision.transforms as transforms
 
@@ -67,26 +65,6 @@ def get_augmented_preprocess_fn(
         p: float = 1.0
 ) -> transforms:
     """Create a preprocessing function with data augmentation using the given preprocess function."""
-    mean = np.array(preprocess.transforms[3].mean)
-    std = np.array(preprocess.transforms[3].std)
-
-    mean2 = -1 * mean / std
-    std2 = 1 / std
-
-    # return transforms.Compose([
-    #     *preprocess.transforms,
-    #     transforms.Normalize(mean2.tolist(), std2.tolist()),
-    #     transforms.ToPILImage(),
-    #     transforms.RandomCrop(224, padding=4, padding_mode='reflect'),
-    #     transforms.RandomHorizontalFlip(),
-    #     transforms.RandomChoice([
-    #         GrayScale(p),
-    #         Solarization(p),
-    #         GaussianBlur(p)
-    #     ]),
-    #     transforms.ToTensor(),
-    #     preprocess.transforms[-1]
-    # ])
     return transforms.Compose([
         preprocess.transforms[0],
         preprocess.transforms[1],
