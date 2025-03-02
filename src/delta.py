@@ -93,10 +93,9 @@ class Linear(nn.Linear):
         self.alpha = alpha
 
         super().__init__(in_features, out_features, bias=True if bias is not None else False)
-        if weight is not None:
-            self.weight = nn.Parameter(weight)
-        if bias is not None:
-            self.bias = nn.Parameter(bias)
+        self.Pre = nn.Linear(in_features, out_features, bias=True if bias is not None else False)
+        self.Pre.weight.copy_(weight)
+        self.Pre.bias.copy_(bias)
 
         self.Delta = LoRALayer(in_features, out_features, r, alpha)
         self.Delta.reset_parameters()

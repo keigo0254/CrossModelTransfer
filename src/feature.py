@@ -489,8 +489,7 @@ def inspect_weights(image_encoder: ImageEncoder, args: Args) -> None:
         f"arithmetic_on_{args.pretrained}",
         f"bs_{args.batch_size}_seed_{args.seed}",
         f"{args.eval_datasets}",
-        f"lamb_{args.lamb}",
-        "weight_norm.jpg"
+        f"weight_norm_lamb_{args.lamb}.jpg"
     )
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     plt.savefig(filename)
