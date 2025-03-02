@@ -116,6 +116,7 @@ def inspect_features(
         f"{args.eval_datasets}",
         "feature",
         f"{args.eval_dataset}",
+        f"lamb_{args.lamb}",
         "q_attn_norm_heatmap.jpg"
     )
     os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -138,6 +139,7 @@ def inspect_features(
         f"{args.eval_datasets}",
         "feature",
         f"{args.eval_dataset}",
+        f"lamb_{args.lamb}",
         "q_delta_norm_heatmap.jpg"
     )
     os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -185,6 +187,7 @@ def inspect_features(
         f"{args.eval_datasets}",
         "feature",
         f"{args.eval_dataset}",
+        f"lamb_{args.lamb}",
         "k_attn_norm_heatmap.jpg"
     )
     os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -207,6 +210,7 @@ def inspect_features(
         f"{args.eval_datasets}",
         "feature",
         f"{args.eval_dataset}",
+        f"lamb_{args.lamb}",
         "k_delta_norm_heatmap.jpg"
     )
     os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -254,6 +258,7 @@ def inspect_features(
         f"{args.eval_datasets}",
         "feature",
         f"{args.eval_dataset}",
+        f"lamb_{args.lamb}",
         "v_attn_norm_heatmap.jpg"
     )
     os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -276,6 +281,7 @@ def inspect_features(
         f"{args.eval_datasets}",
         "feature",
         f"{args.eval_dataset}",
+        f"lamb_{args.lamb}",
         "v_delta_norm_heatmap.jpg"
     )
     os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -328,6 +334,7 @@ def inspect_features(
         f"{args.eval_datasets}",
         "feature",
         f"{args.eval_dataset}",
+        f"lamb_{args.lamb}",
         "out_attn_norm_heatmap.jpg"
     )
     os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -350,6 +357,7 @@ def inspect_features(
         f"{args.eval_datasets}",
         "feature",
         f"{args.eval_dataset}",
+        f"lamb_{args.lamb}",
         "out_delta_norm_heatmap.jpg"
     )
     os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -367,6 +375,7 @@ def inspect_features(
     ax.plot(delta_out_norm_cls_token, label="delta_out", color="orange", marker="o", linestyle="--")
     ax.legend()
     ax.grid()
+    ax.set_ylim(0, 500)
     ax.set_title("Feature Norms of CLS Token")
     ax.set_xlabel("Layer")
     ax.set_ylabel("Norm")
@@ -382,6 +391,7 @@ def inspect_features(
         f"{args.eval_datasets}",
         "feature",
         f"{args.eval_dataset}",
+        f"lamb_{args.lamb}",
         "cls_token_norm.jpg"
     )
     os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -479,6 +489,7 @@ def inspect_weights(image_encoder: ImageEncoder, args: Args) -> None:
         f"arithmetic_on_{args.pretrained}",
         f"bs_{args.batch_size}_seed_{args.seed}",
         f"{args.eval_datasets}",
+        f"lamb_{args.lamb}",
         "weight_norm.jpg"
     )
     os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -488,6 +499,10 @@ def inspect_weights(image_encoder: ImageEncoder, args: Args) -> None:
 
 if __name__ == "__main__":
     args: Args = Args().from_args()
+    lamb = [
+        round(0.1 * i, 2)
+        for i in range(21)
+    ]
     if args.finetuning_type != "lora":
         args.rank = 0
         args.alpha = 0
@@ -514,11 +529,17 @@ if __name__ == "__main__":
         f"task_vector_for_{args.eval_datasets}.pt"
     ))
 
-    image_encoder: ImageEncoder = task_vector.apply_to(pretrained_encoder, args.lamb)
-    inspect_weights(image_encoder, args)
-    for dataset_name in args.eval_datasets:
-        print(f"Processing dataset: {dataset_name}")
-        args.eval_dataset = dataset_name
-        dataset = get_dataset(args.eval_dataset, image_encoder.val_preprocess, args.dataset_root, batch_size=args.batch_size, num_workers=args.num_workers)
-        features = get_inner_features(image_encoder, dataset, args)
-        inspect_features(features, args, image_encoder.model.visual.transformer.layers)
+    for lm in lamb:
+        print("=" * 100)
+        print(f"Processing lambda: {lm}")
+        print("=" * 100)
+        args.lamb = lm
+
+        image_encoder: ImageEncoder = task_vector.apply_to(pretrained_encoder, args.lamb)
+        inspect_weights(image_encoder, args)
+        for dataset_name in args.eval_datasets:
+            print(f"Processing dataset: {dataset_name}")
+            args.eval_dataset = dataset_name
+            dataset = get_dataset(args.eval_dataset, image_encoder.val_preprocess, args.dataset_root, batch_size=args.batch_size, num_workers=args.num_workers)
+            features = get_inner_features(image_encoder, dataset, args)
+            inspect_features(features, args, image_encoder.model.visual.transformer.layers)
