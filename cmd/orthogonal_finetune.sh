@@ -51,7 +51,7 @@ randomize=False
 seed=2025
 orthogonal_finetune $train_datasets $eval_datasets $model_architecture $pretrained $pretrained_to_transfer $finetuning_type $lr $wd $rank $alpha $beta $batch_size $grad_accum_steps $seed $lamb $adjust_type $dataset_type $epochs $num_images $num_augments $randomize
 
-train_datasets="EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
+train_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
 eval_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
 model_architecture=ViT-B-32
 pretrained=laion400m_e32

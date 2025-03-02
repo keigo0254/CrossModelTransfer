@@ -166,7 +166,7 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                 num_workers=args.num_workers,
                 pin_memory=True
             )
-            
+
         total_train_time = 0.0
         for epoch in range(args.epochs):
             train_losses = []
@@ -415,7 +415,7 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             classifier = ImageClassifier(image_encoder, classification_head)
             classifier.freeze_head()
             classifier = classifier.to(rank)
-    
+
             train_dataset = get_dataset(
                 dataset_name, preprocess_fn, args.dataset_root,
                 args.batch_size, args.num_workers
@@ -444,7 +444,7 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                 batch = maybe_dictionarize(batch)
                 inputs = batch["images"].to(rank)
                 labels = batch["labels"].to(rank)
-                
+
                 logits = ddp_classifier(inputs)
                 predictions = torch.argmax(logits, dim=1)
 
@@ -505,7 +505,7 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
 
         total_train_time += time.time() - epoch_train_start_time
         print(f"\nEpoch: {epoch + 1} Training Time: {total_train_time:.2f}s\n")
-            
+
     # Save the finetuned model
     if args.save:
         if args.wandb:

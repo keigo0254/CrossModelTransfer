@@ -1,6 +1,6 @@
 import math
 import os
-from typing import Dict, List
+from typing import Dict
 
 import open_clip
 import torch
@@ -223,6 +223,7 @@ class ImageEncoder(nn.Module):
         for name, module in self.named_modules():
             if isinstance(module, LoRALayer):
                 module.randomize()
+
     def forward(self, images):
         assert self.model is not None
         return self.model.encode_image(images)

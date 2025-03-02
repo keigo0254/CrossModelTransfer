@@ -2,7 +2,7 @@ import random
 from typing import List, Tuple
 
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 
 from .common import get_dataloader, maybe_dictionarize

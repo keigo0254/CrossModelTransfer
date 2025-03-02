@@ -1,7 +1,6 @@
 import os
 from typing import List
 
-import torch
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torchvision.datasets import SVHN as PyTorchSVHN
@@ -46,19 +45,3 @@ class SVHN:
         )
 
         self.classnames: List[str] = [str(i) for i in range(10)]
-
-
-if __name__ == "__main__":
-    import open_clip
-
-    _, preprocess, _ = open_clip.create_model_and_transforms(
-        "ViT-B-32",
-        "openai",
-        cache_dir=".cache"
-    )
-
-    root = os.path.expanduser("dataset")
-    dataset = SVHN(preprocess, location=root)
-    for i, (data, target) in enumerate(dataset.train_loader):
-        print(data.shape, target)
-        break

@@ -310,17 +310,3 @@ class ImageNetK(ImageNet):
         idxs = idxs.astype("int")
         sampler = SubsetSampler(np.where(idxs)[0])
         return sampler
-
-
-if __name__ == "__main__":
-    import open_clip
-
-    _, preprocess, _ = open_clip.create_model_and_transforms(
-        "ViT-B-32", "openai", cache_dir=".cache"
-    )
-
-    root = os.path.expanduser("dataset")
-    d = ImageNet(preprocess, location=root)
-    for i, batch in enumerate(d.train_loader):
-        print(batch["images"].shape, batch["labels"], batch["image_paths"])
-        break

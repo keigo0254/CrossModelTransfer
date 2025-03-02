@@ -83,19 +83,3 @@ class BasicVisionDataset(VisionDataset):
 
     def __len__(self) -> int:
         return len(self.targets)
-
-
-if __name__ == "__main__":
-    import open_clip
-
-    _, preprocess, _ = open_clip.create_model_and_transforms(
-        "ViT-B-32",
-        "openai",
-        cache_dir=".cache"
-    )
-
-    root = os.path.expanduser("dataset")
-    d = CIFAR10(preprocess, location=root)
-    for i, (data, target) in enumerate(d.train_loader):
-        print(data.shape, target)
-        break

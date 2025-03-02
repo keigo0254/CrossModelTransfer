@@ -33,9 +33,7 @@ def get_inner_features(
     dataloader = get_dataloader(dataset, is_train=False, args=args)
 
     features = {}
-    print("Setting feature hooks:")
     for key, module in image_encoder.named_modules():
-        print(key)
         module.register_forward_hook(set_feature_hook(key, features))
 
     image_encoder = image_encoder.to(args.device)
@@ -519,6 +517,7 @@ if __name__ == "__main__":
     image_encoder: ImageEncoder = task_vector.apply_to(pretrained_encoder, args.lamb)
     inspect_weights(image_encoder, args)
     for dataset_name in args.eval_datasets:
+        print(f"Processing dataset: {dataset_name}")
         args.eval_dataset = dataset_name
         dataset = get_dataset(args.eval_dataset, image_encoder.val_preprocess, args.dataset_root, batch_size=args.batch_size, num_workers=args.num_workers)
         features = get_inner_features(image_encoder, dataset, args)

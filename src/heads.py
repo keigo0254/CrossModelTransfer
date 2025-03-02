@@ -92,16 +92,3 @@ def get_classification_head(args: Args, dataset: str) -> nn.Module:
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     classification_head.save(filename)
     return classification_head
-
-
-if __name__ == "__main__":
-    args: Args = Args().from_args()
-    args.train_datasets = [
-        "Cars", "DTD", "EuroSAT", "GTSRB",
-        "MNIST", "RESISC45", "SUN397", "SVHN",
-        "CIFAR10", "CIFAR100", "ImageNet", "STL10"
-    ]
-
-    for dataset in args.train_datasets:
-        classification_head = get_classification_head(args, dataset)
-        print(classification_head)

@@ -5,7 +5,7 @@ from typing import Dict, Optional, Union
 import torch
 import torch.nn as nn
 
-from utils import torch_load, torch_save
+from utils import torch_load
 
 
 class TaskVector:
@@ -80,18 +80,3 @@ class TaskVector:
         print(f'Loading task vector from {path}')
         vector = torch_load(path)
         return cls(vector=vector)
-
-
-if __name__ == "__main__":
-    from args import Args
-    from eval import evaluate
-    from modeling import ImageEncoder
-
-    args: Args = Args().from_args()
-    args.pretrained = "openai"
-    image_encoder_1 = ImageEncoder(args, keep_lang=False)
-    args.pretrained = "laion400m_e32"
-    image_encoder_2 = ImageEncoder(args, keep_lang=False)
-    task_vector = TaskVector(image_encoder_1, image_encoder_2)
-    task_vector.save_vector("task_vector.pt")
-    task_vector = TaskVector.load_vector("task_vector.pt")

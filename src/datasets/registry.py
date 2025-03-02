@@ -1,23 +1,23 @@
 import copy
 import inspect
 import sys
-from typing import Any, Dict, Optional, Tuple, Type
+from typing import Any, Dict, Optional, Type
 
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 
-from .cars import Cars
-from .cifar10 import CIFAR10
-from .cifar100 import CIFAR100
-from .dtd import DTD
-from .eurosat import EuroSAT, EuroSATVal
-from .gtsrb import GTSRB
-from .imagenet import ImageNet
-from .mnist import MNIST
-from .resisc45 import RESISC45
-from .stl10 import STL10
-from .svhn import SVHN
-from .sun397 import SUN397
+from .cars import Cars                      # noqa: F401
+from .cifar10 import CIFAR10                # noqa: F401
+from .cifar100 import CIFAR100              # noqa: F401
+from .dtd import DTD                        # noqa: F401
+from .eurosat import EuroSAT, EuroSATVal    # noqa: F401
+from .gtsrb import GTSRB                    # noqa: F401
+from .imagenet import ImageNet              # noqa: F401
+from .mnist import MNIST                    # noqa: F401
+from .resisc45 import RESISC45              # noqa: F401
+from .stl10 import STL10                    # noqa: F401
+from .svhn import SVHN                      # noqa: F401
+from .sun397 import SUN397                  # noqa: F401
 
 
 # Register all classes in the module

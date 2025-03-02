@@ -134,8 +134,3 @@ class Args:
         default=torch.device("cuda"),
         help="Device"
     )
-
-
-if __name__ == "__main__":
-    args: Args = Args.from_args()
-    print(args)

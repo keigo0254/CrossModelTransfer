@@ -77,19 +77,3 @@ def get_augmented_preprocess_fn(
         preprocess.transforms[2],
         preprocess.transforms[3]
     ])
-
-
-if __name__ == "__main__":
-    import os
-
-    import open_clip
-
-    root = os.path.expanduser("dataset")
-
-    _, original_preprocess_fn, _ = open_clip.create_model_and_transforms(
-        "ViT-B-32", "openai", cache_dir=".cache"
-    )
-
-    augmented_preprocess_fn = get_augmented_preprocess_fn(
-        original_preprocess_fn)
-    print(augmented_preprocess_fn)

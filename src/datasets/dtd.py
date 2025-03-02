@@ -49,20 +49,3 @@ class DTD:
             idx_to_class[i].replace("_", " ")
             for i in range(len(idx_to_class))
         ]
-
-
-if __name__ == "__main__":
-    # Test functionality
-    import open_clip
-
-    _, preprocess, _ = open_clip.create_model_and_transforms(
-        "ViT-B-32",
-        "openai",
-        cache_dir=".cache"
-    )
-
-    root = os.path.expanduser("dataset")
-    d = DTD(preprocess, location=root)
-    for i, (data, target) in enumerate(d.train_loader):
-        print(data.shape, target)
-        break

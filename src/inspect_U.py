@@ -31,10 +31,10 @@ if __name__ == "__main__":
             args.finetuning_type,
             f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
             f"rank_{args.rank}_alpha_{args.alpha}",
-        "orthogonal_finetune",
-        f"bs_{args.batch_size}_seed_{args.seed}",
-        f"{args.train_datasets}",
-        f"{args.dataset_type}",
+            "orthogonal_finetune",
+            f"bs_{args.batch_size}_seed_{args.seed}",
+            f"{args.train_datasets}",
+            f"{args.dataset_type}",
             f"orthogonal_finetune_on_{args.train_dataset}_step_{train_step}_model_vector_{args.model_vector}.pt"
         ))
         for train_step in train_steps
@@ -66,7 +66,7 @@ if __name__ == "__main__":
         elif "v_proj.Delta.U" in key:
             final_U_dict["v"].append(value)
         elif "out_proj.Delta.U" in key:
-            final_U_dict["out"].append(value)            
+            final_U_dict["out"].append(value)
 
     for i, task_vector in enumerate(task_vector_list):
         U_dict = {

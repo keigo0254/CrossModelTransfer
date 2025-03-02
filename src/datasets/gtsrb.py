@@ -209,17 +209,3 @@ class GTSRB:
             "white circle with gray strike bar indicating no passing for trucks "
             "has ended",
         ]
-
-
-if __name__ == "__main__":
-    import open_clip
-
-    _, preprocess, _ = open_clip.create_model_and_transforms(
-        "ViT-B-32", "openai", cache_dir=".cache"
-    )
-
-    root = os.path.expanduser("dataset")
-    d = GTSRB(preprocess, location=root)
-    for i, (data, target) in enumerate(d.train_loader):
-        print(data.shape, target)
-        break

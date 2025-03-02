@@ -1,7 +1,7 @@
 import copy
 import json
 import os
-from typing import Dict, List, Union
+from typing import Dict
 
 import matplotlib.pyplot as plt
 import numpy as np

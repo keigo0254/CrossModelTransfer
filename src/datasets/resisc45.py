@@ -142,19 +142,3 @@ class RESISC45:
         )
 
         self.classnames = [" ".join(c.split("_")) for c in RESISC45Dataset.classes]
-
-
-if __name__ == "__main__":
-    import open_clip
-
-    _, preprocess, _ = open_clip.create_model_and_transforms(
-        "ViT-B-32",
-        "openai",
-        cache_dir=".cache"
-    )
-
-    root = os.path.expanduser("dataset")
-    dataset = RESISC45(preprocess, location=root)
-    for i, (data, target) in enumerate(dataset.train_loader):
-        print(data.shape, target)
-        break
