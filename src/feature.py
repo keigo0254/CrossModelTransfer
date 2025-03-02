@@ -375,7 +375,7 @@ def inspect_features(
     ax.plot(delta_out_norm_cls_token, label="delta_out", color="orange", marker="o", linestyle="--")
     ax.legend()
     ax.grid()
-    ax.set_ylim(0, 500)
+    ax.set_ylim(0, 600)
     ax.set_title("Feature Norms of CLS Token")
     ax.set_xlabel("Layer")
     ax.set_ylabel("Norm")
