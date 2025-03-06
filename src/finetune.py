@@ -1,4 +1,3 @@
-import copy
 import os
 import random
 import time
@@ -18,7 +17,6 @@ from distributed import cleanup_ddp, distribute_loader, setup_ddp
 from eval import evaluate
 from heads import get_classification_head
 from modeling import ImageClassifier, ImageEncoder
-from task_vectors import TaskVector
 from utils import cosine_lr, LabelSmoothing
 
 
