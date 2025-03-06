@@ -24,19 +24,16 @@ from utils import cosine_lr, LabelSmoothing
 
 @torch.no_grad()
 def calculate_norm(image_encoder: ImageEncoder) -> torch.Tensor:
-    total_norm = 0.0
-    count = 0
+    total_norm = []
     state_dict: Dict[str, torch.Tensor] = image_encoder.model.state_dict()
     for name, param in state_dict.items():
         if "Delta.D" in name:
-            total_norm += param.norm(p="fro")
-            count += 1
+            total_norm.append(param.norm(p="fro").item())
         elif "Delta.A" in name:
             A = param
             B = state_dict[name.replace("A", "B")]
-            total_norm += (B @ A).norm(p="fro")
-            count += 1
-    return total_norm / count
+            total_norm.append((B @ A).norm(p="fro").item())
+    return np.mean(total_norm)
 
 
 def finetune(rank: int, args: Args) -> ImageEncoder:
@@ -205,22 +202,22 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
                     f"Training Batch Time: {training_batch_time:.2f}s", flush=True
                 )
 
-            if args.save:
-                if train_step % 200 == 0:
-                    filename = os.path.join(
-                        model_dir,
-                        f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
-                        f"rank_{args.rank}_alpha_{args.alpha}",
-                        "finetune",
-                        f"bs_{args.batch_size}_seed_{args.seed}",
-                        f"finetuned_task_vector_on_{args.train_dataset}_step_{train_step}.pt"
-                    )
-                    image_encoder = copy.deepcopy(ddp_classifier.module.image_encoder).to("cpu")
-                    task_vector = TaskVector(
-                        pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
-                        finetuned_checkpoint=image_encoder
-                    )
-                    task_vector.save_vector(filename)
+            # if args.save:
+            #     if train_step % 200 == 0:
+            #         filename = os.path.join(
+            #             model_dir,
+            #             f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
+            #             f"rank_{args.rank}_alpha_{args.alpha}",
+            #             "finetune",
+            #             f"bs_{args.batch_size}_seed_{args.seed}",
+            #             f"finetuned_task_vector_on_{args.train_dataset}_step_{train_step}.pt"
+            #         )
+            #         image_encoder = copy.deepcopy(ddp_classifier.module.image_encoder).to("cpu")
+            #         task_vector = TaskVector(
+            #             pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
+            #             finetuned_checkpoint=image_encoder
+            #         )
+            #         task_vector.save_vector(filename)
 
         total_train_time += time.time() - epoch_train_start_time
         print(f"\nEpoch: {epoch + 1} Training Time: {total_train_time:.2f}s\n")
@@ -297,19 +294,19 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
             f"finetuned_image_encoder_on_{args.train_dataset}.pt"
         )
         ddp_classifier.module.image_encoder.save(filename)
-        task_vector = TaskVector(
-            pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
-            finetuned_checkpoint=ddp_classifier.module.image_encoder
-        )
-        filename = os.path.join(
-            model_dir,
-            f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
-            f"rank_{args.rank}_alpha_{args.alpha}",
-            "finetune",
-            f"bs_{args.batch_size}_seed_{args.seed}",
-            f"finetuned_task_vector_on_{args.train_dataset}.pt"
-        )
-        task_vector.save_vector(filename)
+        # task_vector = TaskVector(
+        #     pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
+        #     finetuned_checkpoint=ddp_classifier.module.image_encoder
+        # )
+        # filename = os.path.join(
+        #     model_dir,
+        #     f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
+        #     f"rank_{args.rank}_alpha_{args.alpha}",
+        #     "finetune",
+        #     f"bs_{args.batch_size}_seed_{args.seed}",
+        #     f"finetuned_task_vector_on_{args.train_dataset}.pt"
+        # )
+        # task_vector.save_vector(filename)
 
     # Evaluate the finetuned model
     evaluate(ddp_classifier.module.image_encoder, args)

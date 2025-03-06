@@ -57,35 +57,35 @@ def inspect_features(
     features: Dict[str, torch.Tensor], args: Args, num_layers: int = 12
 ) -> None:
     """Inspect the features of the image encoder"""
-    attn_q, attn_k, attn_v, attn_out = [], [], [], []
+    pre_q, pre_k, pre_v, pre_out = [], [], [], []
     delta_q, delta_k, delta_v, delta_out = [], [], [], []
     keys = [
         f"model.visual.transformer.resblocks.{i}.attn"
         for i in range(num_layers)
     ]
     for key in keys:
-        attn_q.append(features[key + ".q_proj"])
-        attn_k.append(features[key + ".k_proj"])
-        attn_v.append(features[key + ".v_proj"])
-        attn_out.append(features[key + ".out_proj"])
+        pre_q.append(features[key + ".q_proj.Pre"])
+        pre_k.append(features[key + ".k_proj.Pre"])
+        pre_v.append(features[key + ".v_proj.Pre"])
+        pre_out.append(features[key + ".out_proj.Pre"])
         delta_q.append(features[key + ".q_proj.Delta"])
         delta_k.append(features[key + ".k_proj.Delta"])
         delta_v.append(features[key + ".v_proj.Delta"])
         delta_out.append(features[key + ".out_proj.Delta"])
 
-    embed_dim = attn_q[0].shape[-1]
+    embed_dim = pre_q[0].shape[-1]
 
-    attn_q_norm = [
+    pre_q_norm = [
         [
             torch.linalg.matrix_norm(q_patch, ord="fro").to("cpu").numpy()
             for q_patch in q_layer
         ]
-        for q_layer in attn_q
+        for q_layer in pre_q
     ]
-    attn_q_norm_cls_token = [attn_q_norm[i][0] for i in range(len(attn_q_norm))]
-    for i in range(len(attn_q_norm)):
-        attn_q_norm[i].pop(0)
-    attn_q_norm_reshaped = np.array(attn_q_norm).reshape(len(attn_q_norm), int(math.sqrt(len(attn_q_norm[0]))), -1)
+    pre_q_norm_cls_token = [pre_q_norm[i][0] for i in range(len(pre_q_norm))]
+    for i in range(len(pre_q_norm)):
+        pre_q_norm[i].pop(0)
+    pre_q_norm_reshaped = np.array(pre_q_norm).reshape(len(pre_q_norm), int(math.sqrt(len(pre_q_norm[0]))), -1)
     delta_q_norm = [
         [
             torch.linalg.matrix_norm(q_patch, ord="fro").to("cpu").numpy()
@@ -98,11 +98,11 @@ def inspect_features(
         delta_q_norm[i].pop(0)
     delta_q_norm_reshaped = np.array(delta_q_norm).reshape(len(delta_q_norm), int(math.sqrt(len(delta_q_norm[0]))), -1)
 
-    best_rows, best_cols = find_best_grid(len(attn_q_norm))
+    best_rows, best_cols = find_best_grid(len(pre_q_norm))
     fig, ax = plt.subplots(best_rows, best_cols, figsize=(20, 15))
     for i in range(best_rows):
         for j in range(best_cols):
-            sns.heatmap(attn_q_norm_reshaped[i * best_cols + j], cmap="coolwarm", annot=False, square=False, ax=ax[i, j])
+            sns.heatmap(pre_q_norm_reshaped[i * best_cols + j], cmap="coolwarm", annot=False, square=False, ax=ax[i, j])
             ax[i, j].set_title(f"Layer {i * best_cols + j}")
     filename = os.path.join(
         args.fig_root,
@@ -117,7 +117,7 @@ def inspect_features(
         "feature",
         f"{args.eval_dataset}",
         f"lamb_{args.lamb}",
-        "q_attn_norm_heatmap.jpg"
+        "q_pre_norm_heatmap.jpg"
     )
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     plt.savefig(filename)
@@ -146,17 +146,17 @@ def inspect_features(
     plt.savefig(filename)
     plt.close()
 
-    attn_k_norm = [
+    pre_k_norm = [
         [
             torch.linalg.matrix_norm(k_patch, ord="fro").to("cpu").numpy()
             for k_patch in k_layer
         ]
-        for k_layer in attn_k
+        for k_layer in pre_k
     ]
-    attn_k_norm_cls_token = [attn_k_norm[i][0] for i in range(len(attn_k_norm))]
-    for i in range(len(attn_k_norm)):
-        attn_k_norm[i].pop(0)
-    attn_k_norm_reshaped = np.array(attn_k_norm).reshape(len(attn_k_norm), int(math.sqrt(len(attn_k_norm[0]))), -1)
+    pre_k_norm_cls_token = [pre_k_norm[i][0] for i in range(len(pre_k_norm))]
+    for i in range(len(pre_k_norm)):
+        pre_k_norm[i].pop(0)
+    pre_k_norm_reshaped = np.array(pre_k_norm).reshape(len(pre_k_norm), int(math.sqrt(len(pre_k_norm[0]))), -1)
     delta_k_norm = [
         [
             torch.linalg.matrix_norm(k_patch, ord="fro").to("cpu").numpy()
@@ -169,11 +169,11 @@ def inspect_features(
         delta_k_norm[i].pop(0)
     delta_k_norm_reshaped = np.array(delta_k_norm).reshape(len(delta_k_norm), int(math.sqrt(len(delta_k_norm[0]))), -1)
 
-    best_rows, best_cols = find_best_grid(len(attn_k_norm))
+    best_rows, best_cols = find_best_grid(len(pre_k_norm))
     fig, ax = plt.subplots(best_rows, best_cols, figsize=(20, 15))
     for i in range(best_rows):
         for j in range(best_cols):
-            sns.heatmap(attn_k_norm_reshaped[i * best_cols + j], cmap="coolwarm", annot=False, square=False, ax=ax[i, j])
+            sns.heatmap(pre_k_norm_reshaped[i * best_cols + j], cmap="coolwarm", annot=False, square=False, ax=ax[i, j])
             ax[i, j].set_title(f"Layer {i * best_cols + j}")
     filename = os.path.join(
         args.fig_root,
@@ -188,7 +188,7 @@ def inspect_features(
         "feature",
         f"{args.eval_dataset}",
         f"lamb_{args.lamb}",
-        "k_attn_norm_heatmap.jpg"
+        "k_pre_norm_heatmap.jpg"
     )
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     plt.savefig(filename)
@@ -217,17 +217,17 @@ def inspect_features(
     plt.savefig(filename)
     plt.close()
 
-    attn_v_norm = [
+    pre_v_norm = [
         [
             torch.linalg.matrix_norm(v_patch, ord="fro").to("cpu").numpy()
             for v_patch in v_layer
         ]
-        for v_layer in attn_v
+        for v_layer in pre_v
     ]
-    attn_v_norm_cls_token = [attn_v_norm[i][0] for i in range(len(attn_v_norm))]
-    for i in range(len(attn_v_norm)):
-        attn_v_norm[i].pop(0)
-    attn_v_norm_reshaped = np.array(attn_v_norm).reshape(len(attn_v_norm), int(math.sqrt(len(attn_v_norm[0]))), -1)
+    pre_v_norm_cls_token = [pre_v_norm[i][0] for i in range(len(pre_v_norm))]
+    for i in range(len(pre_v_norm)):
+        pre_v_norm[i].pop(0)
+    pre_v_norm_reshaped = np.array(pre_v_norm).reshape(len(pre_v_norm), int(math.sqrt(len(pre_v_norm[0]))), -1)
     delta_v_norm = [
         [
             torch.linalg.matrix_norm(v_patch, ord="fro").to("cpu").numpy()
@@ -240,11 +240,11 @@ def inspect_features(
         delta_v_norm[i].pop(0)
     delta_v_norm_reshaped = np.array(delta_v_norm).reshape(len(delta_v_norm), int(math.sqrt(len(delta_v_norm[0]))), -1)
 
-    best_rows, best_cols = find_best_grid(len(attn_v_norm))
+    best_rows, best_cols = find_best_grid(len(pre_v_norm))
     fig, ax = plt.subplots(best_rows, best_cols, figsize=(20, 15))
     for i in range(best_rows):
         for j in range(best_cols):
-            sns.heatmap(attn_v_norm_reshaped[i * best_cols + j], cmap="coolwarm", annot=False, square=False, ax=ax[i, j])
+            sns.heatmap(pre_v_norm_reshaped[i * best_cols + j], cmap="coolwarm", annot=False, square=False, ax=ax[i, j])
             ax[i, j].set_title(f"Layer {i * best_cols + j}")
     filename = os.path.join(
         args.fig_root,
@@ -259,7 +259,7 @@ def inspect_features(
         "feature",
         f"{args.eval_dataset}",
         f"lamb_{args.lamb}",
-        "v_attn_norm_heatmap.jpg"
+        "v_pre_norm_heatmap.jpg"
     )
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     plt.savefig(filename)
@@ -288,22 +288,22 @@ def inspect_features(
     plt.savefig(filename)
     plt.close()
 
-    for i in range(len(attn_out)):
-        attn_out[i] = attn_out[i].to("cpu").reshape(len(delta_v_norm[0]) + 1, -1, embed_dim)
+    for i in range(len(pre_out)):
+        pre_out[i] = pre_out[i].to("cpu").reshape(len(delta_v_norm[0]) + 1, -1, embed_dim)
         delta_out[i] = delta_out[i].to("cpu").reshape(len(delta_v_norm[0]) + 1, -1, embed_dim)
 
-    attn_out_norm = [
+    pre_out_norm = [
         [
             torch.linalg.matrix_norm(out_patch, ord="fro").to("cpu").numpy()
             for out_patch in out_layer
         ]
-        for out_layer in attn_out
+        for out_layer in pre_out
     ]
 
-    attn_out_norm_cls_token = [attn_out_norm[i][0] for i in range(len(attn_out_norm))]
-    for i in range(len(attn_out_norm)):
-        attn_out_norm[i].pop(0)
-    attn_out_norm_reshaped = np.array(attn_out_norm).reshape(len(attn_out_norm), int(math.sqrt(len(attn_out_norm[0]))), -1)
+    pre_out_norm_cls_token = [pre_out_norm[i][0] for i in range(len(pre_out_norm))]
+    for i in range(len(pre_out_norm)):
+        pre_out_norm[i].pop(0)
+    pre_out_norm_reshaped = np.array(pre_out_norm).reshape(len(pre_out_norm), int(math.sqrt(len(pre_out_norm[0]))), -1)
     delta_out_norm = [
         [
             torch.linalg.matrix_norm(out_patch, ord="fro").to("cpu").numpy()
@@ -316,11 +316,11 @@ def inspect_features(
         delta_out_norm[i].pop(0)
     delta_out_norm_reshaped = np.array(delta_out_norm).reshape(len(delta_out_norm), int(math.sqrt(len(delta_out_norm[0]))), -1)
 
-    best_rows, best_cols = find_best_grid(len(attn_out_norm))
+    best_rows, best_cols = find_best_grid(len(pre_out_norm))
     fig, ax = plt.subplots(best_rows, best_cols, figsize=(20, 15))
     for i in range(best_rows):
         for j in range(best_cols):
-            sns.heatmap(attn_out_norm_reshaped[i * best_cols + j], cmap="coolwarm", annot=False, square=False, ax=ax[i, j])
+            sns.heatmap(pre_out_norm_reshaped[i * best_cols + j], cmap="coolwarm", annot=False, square=False, ax=ax[i, j])
             ax[i, j].set_title(f"Layer {i * best_cols + j}")
     filename = os.path.join(
         args.fig_root,
@@ -335,7 +335,7 @@ def inspect_features(
         "feature",
         f"{args.eval_dataset}",
         f"lamb_{args.lamb}",
-        "out_attn_norm_heatmap.jpg"
+        "out_pre_norm_heatmap.jpg"
     )
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     plt.savefig(filename)
@@ -365,13 +365,13 @@ def inspect_features(
     plt.close()
 
     fig, ax = plt.subplots()
-    ax.plot(attn_q_norm_cls_token, label="attn_q", color="red", marker="o")
+    ax.plot(pre_q_norm_cls_token, label="pre_q", color="red", marker="o")
     ax.plot(delta_q_norm_cls_token, label="delta_q", color="red", marker="o", linestyle="--")
-    ax.plot(attn_k_norm_cls_token, label="attn_k", color="blue", marker="o")
+    ax.plot(pre_k_norm_cls_token, label="pre_k", color="blue", marker="o")
     ax.plot(delta_k_norm_cls_token, label="delta_k", color="blue", marker="o", linestyle="--")
-    ax.plot(attn_v_norm_cls_token, label="attn_v", color="green", marker="o")
+    ax.plot(pre_v_norm_cls_token, label="pre_v", color="green", marker="o")
     ax.plot(delta_v_norm_cls_token, label="delta_v", color="green", marker="o", linestyle="--")
-    ax.plot(attn_out_norm_cls_token, label="attn_out", color="orange", marker="o")
+    ax.plot(pre_out_norm_cls_token, label="pre_out", color="orange", marker="o")
     ax.plot(delta_out_norm_cls_token, label="delta_out", color="orange", marker="o", linestyle="--")
     ax.legend()
     ax.grid()
@@ -401,7 +401,7 @@ def inspect_features(
 
 def inspect_weights(image_encoder: ImageEncoder, args: Args) -> None:
     """Inspect the weights of the image encoder"""
-    attn_q, attn_k, attn_v, attn_out = [], [], [], []
+    pre_q, pre_k, pre_v, pre_out = [], [], [], []
     delta_q, delta_k, delta_v, delta_out = [], [], [], []
     keys = [
         f"model.visual.transformer.resblocks.{i}.attn"
@@ -410,55 +410,55 @@ def inspect_weights(image_encoder: ImageEncoder, args: Args) -> None:
     state_dict = image_encoder.state_dict()
     if args.finetuning_type == "lora":
         for key in keys:
-            attn_q.append(state_dict[key + ".q_proj.weight"])
-            attn_k.append(state_dict[key + ".k_proj.weight"])
-            attn_v.append(state_dict[key + ".v_proj.weight"])
-            attn_out.append(state_dict[key + ".out_proj.weight"])
+            pre_q.append(state_dict[key + ".q_proj.Pre.weight"])
+            pre_k.append(state_dict[key + ".k_proj.Pre.weight"])
+            pre_v.append(state_dict[key + ".v_proj.Pre.weight"])
+            pre_out.append(state_dict[key + ".out_proj.Pre.weight"])
             delta_q.append(state_dict[key + ".q_proj.Delta.B"] @ state_dict[key + ".q_proj.Delta.A"])
             delta_k.append(state_dict[key + ".k_proj.Delta.B"] @ state_dict[key + ".k_proj.Delta.A"])
             delta_v.append(state_dict[key + ".v_proj.Delta.B"] @ state_dict[key + ".v_proj.Delta.A"])
             delta_out.append(state_dict[key + ".out_proj.Delta.B"] @ state_dict[key + ".out_proj.Delta.A"])
     else:
         for key in keys:
-            attn_q.append(state_dict[key + ".q_proj.weight"])
-            attn_k.append(state_dict[key + ".k_proj.weight"])
-            attn_v.append(state_dict[key + ".v_proj.weight"])
-            attn_out.append(state_dict[key + ".out_proj.weight"])
+            pre_q.append(state_dict[key + ".q_proj.Pre.weight"])
+            pre_k.append(state_dict[key + ".k_proj.Pre.weight"])
+            pre_v.append(state_dict[key + ".v_proj.Pre.weight"])
+            pre_out.append(state_dict[key + ".out_proj.Pre.weight"])
             delta_q.append(state_dict[key + ".q_proj.Delta.D"])
             delta_k.append(state_dict[key + ".k_proj.Delta.D"])
             delta_v.append(state_dict[key + ".v_proj.Delta.D"])
             delta_out.append(state_dict[key + ".out_proj.Delta.D"])
 
-    attn_q_norm = [
+    pre_q_norm = [
         torch.linalg.matrix_norm(q_layer, ord="fro").to("cpu").numpy()
-        for q_layer in attn_q
+        for q_layer in pre_q
     ]
     delta_q_norm = [
         torch.linalg.matrix_norm(q_layer, ord="fro").to("cpu").numpy()
         for q_layer in delta_q
     ]
 
-    attn_k_norm = [
+    pre_k_norm = [
         torch.linalg.matrix_norm(k_layer, ord="fro").to("cpu").numpy()
-        for k_layer in attn_k
+        for k_layer in pre_k
     ]
     delta_k_norm = [
         torch.linalg.matrix_norm(k_layer, ord="fro").to("cpu").numpy()
         for k_layer in delta_k
     ]
 
-    attn_v_norm = [
+    pre_v_norm = [
         torch.linalg.matrix_norm(v_layer, ord="fro").to("cpu").numpy()
-        for v_layer in attn_v
+        for v_layer in pre_v
     ]
     delta_v_norm = [
         torch.linalg.matrix_norm(v_layer, ord="fro").to("cpu").numpy()
         for v_layer in delta_v
     ]
 
-    attn_out_norm = [
+    pre_out_norm = [
         torch.linalg.matrix_norm(out_layer, ord="fro").to("cpu").numpy()
-        for out_layer in attn_out
+        for out_layer in pre_out
     ]
     delta_out_norm = [
         torch.linalg.matrix_norm(out_layer, ord="fro").to("cpu").numpy()
@@ -466,13 +466,13 @@ def inspect_weights(image_encoder: ImageEncoder, args: Args) -> None:
     ]
 
     fig, ax = plt.subplots()
-    ax.plot(attn_q_norm, label="attn_q", color="red", marker="o")
+    ax.plot(pre_q_norm, label="pre_q", color="red", marker="o")
     ax.plot(delta_q_norm, label="delta_q", color="red", marker="o", linestyle="--")
-    ax.plot(attn_k_norm, label="attn_k", color="blue", marker="o")
+    ax.plot(pre_k_norm, label="pre_k", color="blue", marker="o")
     ax.plot(delta_k_norm, label="delta_k", color="blue", marker="o", linestyle="--")
-    ax.plot(attn_v_norm, label="attn_v", color="green", marker="o")
+    ax.plot(pre_v_norm, label="pre_v", color="green", marker="o")
     ax.plot(delta_v_norm, label="delta_v", color="green", marker="o", linestyle="--")
-    ax.plot(attn_out_norm, label="attn_out", color="orange", marker="o")
+    ax.plot(pre_out_norm, label="pre_out", color="orange", marker="o")
     ax.plot(delta_out_norm, label="delta_out", color="orange", marker="o", linestyle="--")
     ax.legend()
     ax.grid()
@@ -489,6 +489,7 @@ def inspect_weights(image_encoder: ImageEncoder, args: Args) -> None:
         f"arithmetic_on_{args.pretrained}",
         f"bs_{args.batch_size}_seed_{args.seed}",
         f"{args.eval_datasets}",
+        "weight_norm",
         f"weight_norm_lamb_{args.lamb}.jpg"
     )
     os.makedirs(os.path.dirname(filename), exist_ok=True)

@@ -62,7 +62,7 @@ class Args:
         default="none",
         help="Adjust type"
     )
-    dataset_type: str = config(  # cycle, mix, consecutive
+    dataset_type: str = config(  # cycle, mix
         default=None,
         help="Dataset type"
     )

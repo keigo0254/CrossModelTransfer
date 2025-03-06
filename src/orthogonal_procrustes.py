@@ -1,4 +1,3 @@
-import copy
 import os
 import random
 from typing import Dict
@@ -79,7 +78,7 @@ def plot_coef_vs_average_accuracy(info: Dict[str, Dict[str, float]], args: Args)
         f"orthogonal_procrustes_on_{args.pretrained}",
         f"bs_{args.batch_size}_seed_{args.seed}",
         f"{args.eval_datasets}",
-        f"coef_vs_average_accuracy.jpg"
+        "coef_vs_average_accuracy.jpg"
     )
     plt.savefig(filename)
     plt.close()
@@ -195,8 +194,6 @@ def main():
         f"bs_{args.batch_size}_seed_{args.seed}",
         f"orthogonal_procrustes_task_vector_for_{args.eval_datasets}.pt"
     ))
-
-
 
 
 if __name__ == "__main__":

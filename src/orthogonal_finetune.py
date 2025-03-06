@@ -1,4 +1,3 @@
-import copy
 import os
 import random
 import time
@@ -26,7 +25,7 @@ from utils import cosine_lr, LabelSmoothing
 
 class OrthLoss(nn.Module):
     """Orthogonal loss function."""
-    def __init__(self, adjust_type: str) -> None:
+    def __init__(self, adjust_type: str = "fro") -> None:
         super().__init__()
         self.adjust_type = adjust_type
 
@@ -52,15 +51,15 @@ class OrthLoss(nn.Module):
 
 
 @torch.no_grad()
-def calculate_norm(image_encoder: ImageEncoder) -> torch.Tensor:
-    total_norm = 0.0
+def calculate_det(image_encoder: ImageEncoder) -> torch.Tensor:
+    total_det = 0.0
     count = 0
     state_dict: Dict[str, torch.Tensor] = image_encoder.model.state_dict()
     for name, param in state_dict.items():
         if "Delta.U" in name:
-            total_norm += (param.T @ param).norm(p="fro")
+            total_det += torch.linalg.det(param)
             count += 1
-    return total_norm / count
+    return total_det / count
 
 
 def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
@@ -70,13 +69,13 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
         run = wandb.init(
             project="Task Arithmetic",
             group=f"orthogonal_finetune_{args.finetuning_type}",
-            name=f"{args.model_architecture}_{args.pretrained}_{args.train_dataset}_{args.seed}",
+            name=f"{args.model_architecture}_{args.pretrained}_{args.train_datasets}_{args.seed}",
             config=config_dict,
             settings=wandb.Settings(start_method="thread"),
         )
 
     print("=" * 100)
-    print(f"Orthogonal Finetuning {args.model_architecture} on {args.train_dataset} with {args.finetuning_type} finetuning")
+    print(f"Orthogonal Finetuning {args.model_architecture} on {args.train_datasets} with {args.finetuning_type} finetuning")
     print("=" * 100)
     print(f"Using Device: {args.device}")
 
@@ -85,7 +84,7 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
     model_dir = os.path.join(
         args.model_root,
         args.model_architecture,
-        args.pretrained,
+        args.pretrained_to_transfer,
         args.finetuning_type
     )
 
@@ -107,29 +106,25 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             f"task_vector_for_{args.train_datasets}.pt"
     ))
 
-    if args.model_vector:
-        model_vector = TaskVector.load_vector(os.path.join(
-            args.model_root,
-            args.model_architecture,
-            args.pretrained_to_transfer,
-            args.finetuning_type,
-            f"model_vector_from_{args.pretrained_to_transfer}_to_{args.pretrained}_rank_{args.rank}.pt"
-        ))
-        task_vector = task_vector + model_vector
-
     image_encoder: ImageEncoder = task_vector.apply_to(image_encoder, args.lamb)
+    with torch.no_grad():
+        for name, param in image_encoder.named_parameters():
+            if "Delta.U" in name:
+                param.copy_(torch.eye(param.shape[0], device=param.device))
     image_encoder.freeze_except_U()
 
     if args.randomize:
+        print("Randomizing U")
         image_encoder.randomize_U()
 
     if args.wandb:
+        print("Logging model to wandb")
         wandb.watch(image_encoder, log="all", log_freq=250)
 
     print("\nTrainable Parameters:")
     for name, param in image_encoder.named_parameters():
         if param.requires_grad:
-            print(name)
+            print(name, torch.linalg.matrix_norm(param - torch.eye(param.shape[0]), ord="fro"), param.shape, param.device)
 
     params = [p for p in image_encoder.parameters() if p.requires_grad]
     assert len(params) > 0, "No trainable parameters found"
@@ -174,7 +169,7 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             train_orth_losses = []
             train_accs = []
             training_batch_times = []
-            task_vector_norms = []
+            task_vector_det = []
             learning_rates = []
             for dataset_name in args.train_datasets:
                 args.train_dataset = dataset_name
@@ -224,13 +219,13 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                     train_corrects = (predictions == labels).sum().item()
                     train_acc = train_corrects / len(labels)
 
-                    norm = calculate_norm(ddp_classifier.module.image_encoder)
+                    det = calculate_det(ddp_classifier.module.image_encoder)
 
                     train_losses.append(train_loss.item())
                     train_ce_losses.append(train_ce_loss.item())
                     train_orth_losses.append(train_orth_loss.item())
                     train_accs.append(train_acc)
-                    task_vector_norms.append(norm.item())
+                    task_vector_det.append(det.item())
                     learning_rates.append(optimizer.param_groups[0]["lr"])
 
                     if (i + 1) % args.grad_accum_steps == 0:
@@ -251,29 +246,31 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                             f"Training CE Loss: {train_ce_loss.item():.4f}\t"
                             f"Training Orth Loss: {train_orth_loss.item():.4f}\t"
                             f"Training Accuracy: {train_acc:.2%}\t"
-                            f"Task Vector Norm: {norm:.4f}\t"
+                            f"Task Vector Det: {det:.4f}\t"
                             f"lr: {optimizer.param_groups[0]['lr']:.8f}\t"
                             f"Training Batch Time: {training_batch_time:.2f}s", flush=True
                         )
 
-                    if args.save:
-                        if train_step % 200 == 0:
-                            filename = os.path.join(
-                                model_dir,
-                                f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
-                                f"rank_{args.rank}_alpha_{args.alpha}",
-                                "orthogonal_finetune",
-                                f"bs_{args.batch_size}_seed_{args.seed}",
-                                f"{args.train_datasets}",
-                                f"{args.dataset_type}",
-                                f"orthogonal_finetune_on_{args.train_dataset}_step_{train_step}_model_vector_{args.model_vector}.pt"
-                            )
-                            image_encoder = copy.deepcopy(ddp_classifier.module.image_encoder).to("cpu")
-                            task_vector = TaskVector(
-                                pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
-                                finetuned_checkpoint=image_encoder
-                            )
-                            task_vector.save_vector(filename)
+                    # if args.save:
+                    #     if train_step % 200 == 0:
+                    #         filename = os.path.join(
+                    #             model_dir,
+                    #             f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
+                    #             f"rank_{args.rank}_alpha_{args.alpha}",
+                    #             "orthogonal_finetune",
+                    #             f"bs_{args.batch_size}_seed_{args.seed}",
+                    #             f"{args.train_datasets}",
+                    #             f"{args.dataset_type}",
+                    #             f"randomize_{args.randomize}_lamb_{args.lamb}",
+                    #             f"num_images_{args.num_images}_num_augments_{args.num_augments}_beta_{args.beta}",
+                    #             f"orthogonal_finetune_on_{args.train_dataset}_step_{train_step}_model_vector_{args.model_vector}.pt"
+                    #         )
+                    #         image_encoder = copy.deepcopy(ddp_classifier.module.image_encoder).to("cpu")
+                    #         task_vector = TaskVector(
+                    #             pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
+                    #             finetuned_checkpoint=image_encoder
+                    #         )
+                    #         task_vector.save_vector(filename)
 
                 total_train_time += time.time() - epoch_train_start_time
                 print(f"\nEpoch: {epoch + 1} Training Time: {total_train_time:.2f}s\n")
@@ -285,7 +282,7 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                         "Training CE Loss": np.mean(train_ce_losses),
                         "Training Orth Loss": np.mean(train_orth_losses),
                         "Training Accuracy": np.mean(train_accs),
-                        "Task Vector Norm": np.mean(task_vector_norms),
+                        "Task Vector Det": np.mean(task_vector_det),
                         "Learning Rate": np.mean(learning_rates),
                         "Training Batch Time": np.mean(training_batch_times),
                     })
@@ -385,123 +382,26 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                         f"Training Batch Time: {training_batch_time:.2f}s", flush=True
                     )
 
-                if args.save:
-                    if train_step % 200 == 0:
-                        filename = os.path.join(
-                            model_dir,
-                            f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
-                            f"rank_{args.rank}_alpha_{args.alpha}",
-                            "orthogonal_finetune",
-                            f"bs_{args.batch_size}_seed_{args.seed}",
-                            f"{args.train_datasets}",
-                            f"{args.dataset_type}",
-                            f"randomize_{args.randomize}",
-                            f"orthogonal_finetune_on_{args.train_dataset}_step_{train_step}_model_vector_{args.model_vector}.pt"
-                        )
-                        image_encoder = copy.deepcopy(ddp_classifier.module.image_encoder).to("cpu")
-                        task_vector = TaskVector(
-                            pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
-                            finetuned_checkpoint=image_encoder
-                        )
-                        task_vector.save_vector(filename)
-
-        total_train_time += time.time() - epoch_train_start_time
-        print(f"\nEpoch: {epoch + 1} Training Time: {total_train_time:.2f}s\n")
-
-    elif args.dataset_type == "consecutive":
-        for dataset_name in args.train_datasets:
-            args.train_dataset = dataset_name
-            classification_head = get_classification_head(args, dataset_name)
-            classifier = ImageClassifier(image_encoder, classification_head)
-            classifier.freeze_head()
-            classifier = classifier.to(rank)
-
-            train_dataset = get_dataset(
-                dataset_name, preprocess_fn, args.dataset_root,
-                args.batch_size, args.num_workers
-            )
-            train_dataloader = get_dataloader(
-                train_dataset, is_train=True, args=args, image_encoder=None
-            )
-
-            train_num_batches = len(train_dataloader)
-
-            scheduler = cosine_lr(
-                optimizer, args.lr, args.warmup_length,
-                args.epochs * train_num_batches // args.grad_accum_steps
-            )
-
-            ddp_train_loader = distribute_loader(train_dataloader)
-            ddp_classifier = torch.nn.parallel.DistributedDataParallel(
-                classifier, device_ids=[rank],
-                find_unused_parameters=False, output_device=rank
-            )
-
-            epoch_train_start_time = time.time()
-            ddp_classifier.train()
-            ddp_train_loader.sampler.set_epoch(epoch)
-            for i, batch in enumerate(ddp_train_loader):
-                batch = maybe_dictionarize(batch)
-                inputs = batch["images"].to(rank)
-                labels = batch["labels"].to(rank)
-
-                logits = ddp_classifier(inputs)
-                predictions = torch.argmax(logits, dim=1)
-
-                train_ce_loss = ce_loss_fn(logits, labels)
-                train_orth_loss = orth_loss_fn(ddp_classifier.module.image_encoder)
-
-                train_loss = train_ce_loss + args.beta * train_orth_loss
-                train_loss.backward()
-
-                train_corrects = (predictions == labels).sum().item()
-                train_acc = train_corrects / len(labels)
-
-                train_losses.append(train_loss.item())
-                train_ce_losses.append(train_ce_loss.item())
-                train_orth_losses.append(train_orth_loss.item())
-                train_accs.append(train_acc)
-
-                if (i + 1) % args.grad_accum_steps == 0:
-                    scheduler(train_step)
-                    nn.utils.clip_grad_norm_(params, max_norm=1.0)
-                    optimizer.step()
-                    optimizer.zero_grad()
-
-                    training_batch_time = time.time() - batch_start_time
-                    training_batch_times.append(training_batch_time)
-                    percent_complete = 100 * i / len(ddp_train_loader)
-                    print(
-                        f"Training on {args.train_dataset}\t Epoch: {epoch + 1}/{args.epochs}\t"
-                        f"Batch: {i + 1}/{len(ddp_train_loader)} "
-                        f"({percent_complete:.2f}%)\t"
-                        f"Step: {train_step + 1}/{args.epochs * train_num_batches // args.grad_accum_steps}\t"
-                        f"Training Loss: {train_loss.item():.4f}\t"
-                        f"Training CE Loss: {train_ce_loss.item():.4f}\t"
-                        f"Training Orth Loss: {train_orth_loss.item():.4f}\t"
-                        f"Training Accuracy: {train_acc:.2%}\t"
-                        f"Training Batch Time: {training_batch_time:.2f}s", flush=True
-                    )
-
-                if args.save:
-                    if train_step % 200 == 0:
-                        filename = os.path.join(
-                            model_dir,
-                            f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
-                            f"rank_{args.rank}_alpha_{args.alpha}",
-                            "orthogonal_finetune",
-                            f"bs_{args.batch_size}_seed_{args.seed}",
-                            f"{args.train_datasets}",
-                            f"{args.dataset_type}",
-                            f"randomize_{args.randomize}",
-                            f"orthogonal_finetune_on_{args.train_dataset}_step_{train_step}_model_vector_{args.model_vector}.pt"
-                        )
-                        image_encoder = copy.deepcopy(ddp_classifier.module.image_encoder).to("cpu")
-                        task_vector = TaskVector(
-                            pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
-                            finetuned_checkpoint=image_encoder
-                        )
-                        task_vector.save_vector(filename)
+                # if args.save:
+                #     if train_step % 200 == 0:
+                #         filename = os.path.join(
+                #             model_dir,
+                #             f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
+                #             f"rank_{args.rank}_alpha_{args.alpha}",
+                #             "orthogonal_finetune",
+                #             f"bs_{args.batch_size}_seed_{args.seed}",
+                #             f"{args.train_datasets}",
+                #             f"{args.dataset_type}",
+                #             f"randomize_{args.randomize}_lamb_{args.lamb}",
+                #             f"num_images_{args.num_images}_num_augments_{args.num_augments}_beta_{args.beta}",
+                #             f"orthogonal_finetune_on_{args.train_dataset}_step_{train_step}_model_vector_{args.model_vector}.pt"
+                #         )
+                #         image_encoder = copy.deepcopy(ddp_classifier.module.image_encoder).to("cpu")
+                #         task_vector = TaskVector(
+                #             pretrained_checkpoint=ImageEncoder(args, keep_lang=False),
+                #             finetuned_checkpoint=image_encoder
+                #         )
+                #         task_vector.save_vector(filename)
 
         total_train_time += time.time() - epoch_train_start_time
         print(f"\nEpoch: {epoch + 1} Training Time: {total_train_time:.2f}s\n")
@@ -514,12 +414,13 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             model_dir,
             f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
             f"rank_{args.rank}_alpha_{args.alpha}",
-            "orthogonal_finetune",
+            f"orthogonal_finetune_on_{args.pretrained}",
             f"bs_{args.batch_size}_seed_{args.seed}",
             f"{args.train_datasets}",
             f"{args.dataset_type}",
-            f"randomize_{args.randomize}",
-            f"orthogonal_finetuned_image_encoder_on_{args.train_datasets}_for_epochs_{args.epochs}_model_vector_{args.model_vector}.pt"
+            f"randomize_{args.randomize}_lamb_{args.lamb}",
+            f"num_images_{args.num_images}_num_augments_{args.num_augments}_beta_{args.beta}",
+            f"orthogonal_finetuned_image_encoder_on_{args.train_datasets}_for_epochs_{args.epochs}.pt"
         )
         image_encoder = ImageEncoder(args, keep_lang=False)
         state_dict = ddp_classifier.module.image_encoder.model.state_dict()
@@ -534,11 +435,12 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             model_dir,
             f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
             f"rank_{args.rank}_alpha_{args.alpha}",
-            "orthogonal_finetune",
+            f"orthogonal_finetune_on_{args.pretrained}",
             f"bs_{args.batch_size}_seed_{args.seed}",
             f"{args.train_datasets}",
             f"{args.dataset_type}",
-            f"randomize_{args.randomize}",
+            f"randomize_{args.randomize}_lamb_{args.lamb}",
+            f"num_images_{args.num_images}_num_augments_{args.num_augments}_beta_{args.beta}",
             f"orthogonal_finetuned_task_vector_on_{args.train_datasets}_for_epochs_{args.epochs}_model_vector_{args.model_vector}.pt"
         )
         task_vector.save_vector(filename)
@@ -587,7 +489,8 @@ if __name__ == "__main__":
         f"bs_{args.batch_size}_seed_{args.seed}",
         f"{args.train_datasets}",
         f"{args.dataset_type}",
-        f"randomize_{args.randomize}",
+        f"randomize_{args.randomize}_lamb_{args.lamb}",
+        f"num_images_{args.num_images}_num_augments_{args.num_augments}_beta_{args.beta}",
         f"orthogonal_finetuned_on_{args.train_datasets}_for_epochs_{args.epochs}_model_vector_{args.model_vector}.json"
     )
     args.fig = os.path.join(
@@ -601,7 +504,8 @@ if __name__ == "__main__":
         f"bs_{args.batch_size}_seed_{args.seed}",
         f"{args.train_datasets}",
         f"{args.dataset_type}",
-        f"randomize_{args.randomize}",
+        f"randomize_{args.randomize}_lamb_{args.lamb}",
+        f"num_images_{args.num_images}_num_augments_{args.num_augments}_beta_{args.beta}",
         f"orthogonal_finetuned_on_{args.train_datasets}_for_epochs_{args.epochs}_model_vector_{args.model_vector}.jpg"
     )
 

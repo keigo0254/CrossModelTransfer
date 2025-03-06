@@ -23,9 +23,10 @@ function orthogonal_finetune()
         --epochs $epochs \
         --num_images $num_images \
         --num_augments $num_augments \
-        --randomize $randomize \
         --save \
-        --wandb
+        --wandb #\
+        # --randomize \
+        # --model_vector
 }
 
 train_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
@@ -44,12 +45,11 @@ batch_size=128
 grad_accum_steps=1 # 1 for ViT-B-32, 2 for ViT-B-16 8 for ViT-L-14
 lamb=1.0
 beta=1.0
-epochs=1
+epochs=100
 num_images=100
 num_augments=10
-randomize=False
 seed=2025
-orthogonal_finetune $train_datasets $eval_datasets $model_architecture $pretrained $pretrained_to_transfer $finetuning_type $lr $wd $rank $alpha $beta $batch_size $grad_accum_steps $seed $lamb $adjust_type $dataset_type $epochs $num_images $num_augments $randomize
+orthogonal_finetune $train_datasets $eval_datasets $model_architecture $pretrained $pretrained_to_transfer $finetuning_type $lr $wd $rank $alpha $beta $batch_size $grad_accum_steps $seed $lamb $adjust_type $dataset_type $epochs $num_images $num_augments
 
 train_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
 eval_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
@@ -70,9 +70,8 @@ beta=1.0
 epochs=100
 num_images=100
 num_augments=10
-randomize=False
 seed=2025
-orthogonal_finetune $train_datasets $eval_datasets $model_architecture $pretrained $pretrained_to_transfer $finetuning_type $lr $wd $rank $alpha $beta $batch_size $grad_accum_steps $seed $lamb $adjust_type $dataset_type $epochs $num_images $num_augments $randomize
+orthogonal_finetune $train_datasets $eval_datasets $model_architecture $pretrained $pretrained_to_transfer $finetuning_type $lr $wd $rank $alpha $beta $batch_size $grad_accum_steps $seed $lamb $adjust_type $dataset_type $epochs $num_images $num_augments
 
 train_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
 eval_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
@@ -93,6 +92,5 @@ beta=1.0
 epochs=100
 num_images=100
 num_augments=10
-randomize=False
 seed=2025
-orthogonal_finetune $train_datasets $eval_datasets $model_architecture $pretrained $pretrained_to_transfer $finetuning_type $lr $wd $rank $alpha $beta $batch_size $grad_accum_steps $seed $lamb $adjust_type $dataset_type $epochs $num_images $num_augments $randomize
+orthogonal_finetune $train_datasets $eval_datasets $model_architecture $pretrained $pretrained_to_transfer $finetuning_type $lr $wd $rank $alpha $beta $batch_size $grad_accum_steps $seed $lamb $adjust_type $dataset_type $epochs $num_images $num_augments
