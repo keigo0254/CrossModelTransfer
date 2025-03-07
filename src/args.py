@@ -54,8 +54,8 @@ class Args:
         default=None,
         help="Pretrained type to transfer knowledge from"
     )
-    finetuning_type: str = config(  # full, linear, lora
-        default="full",
+    finetuning_type: str = config(  # standard, linear, lora
+        default="standard",
         help="Finetuning type"
     )
     adjust_type: str = config(  # fro, l2

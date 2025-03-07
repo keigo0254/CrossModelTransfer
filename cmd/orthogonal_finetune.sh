@@ -25,8 +25,7 @@ function orthogonal_finetune()
         --num_augments $num_augments \
         --save \
         --wandb #\
-        # --randomize \
-        # --model_vector
+        # --randomize
 }
 
 train_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
@@ -34,7 +33,7 @@ eval_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
 model_architecture=ViT-B-32
 pretrained=laion400m_e32
 pretrained_to_transfer=openai
-finetuning_type=full # full, linear, lora
+finetuning_type=standard # standard, linear, lora
 adjust_type=fro
 dataset_type=cycle
 lr=1e-05
@@ -56,7 +55,7 @@ eval_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
 model_architecture=ViT-B-32
 pretrained=laion400m_e32
 pretrained_to_transfer=openai
-finetuning_type=linear # full, linear, lora
+finetuning_type=linear # standard, linear, lora
 adjust_type=fro
 dataset_type=cycle
 lr=1e-05
@@ -78,7 +77,7 @@ eval_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
 model_architecture=ViT-B-32
 pretrained=laion400m_e32
 pretrained_to_transfer=openai
-finetuning_type=lora # full, linear, lora
+finetuning_type=lora # standard, linear, lora
 adjust_type=fro
 dataset_type=cycle
 lr=1e-05

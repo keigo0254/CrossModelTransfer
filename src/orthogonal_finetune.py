@@ -101,7 +101,6 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             args.finetuning_type,
             f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
             f"rank_{args.rank}_alpha_{args.alpha}",
-            "task_vector",
             f"bs_{args.batch_size}_seed_{args.seed}",
             f"task_vector_for_{args.train_datasets}.pt"
     ))
@@ -441,7 +440,7 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             f"{args.dataset_type}",
             f"randomize_{args.randomize}_lamb_{args.lamb}",
             f"num_images_{args.num_images}_num_augments_{args.num_augments}_beta_{args.beta}",
-            f"orthogonal_finetuned_task_vector_on_{args.train_datasets}_for_epochs_{args.epochs}_model_vector_{args.model_vector}.pt"
+            f"orthogonal_finetuned_task_vector_on_{args.train_datasets}_for_epochs_{args.epochs}.pt"
         )
         task_vector.save_vector(filename)
 
@@ -462,8 +461,8 @@ if __name__ == "__main__":
         "Batch size must be divisible by gradient accumulation steps"
     args.batch_size = args.batch_size // args.grad_accum_steps
 
-    assert args.finetuning_type in ["full", "linear", "lora"], \
-        "Finetuning type must be one of: full, linear, lora"
+    assert args.finetuning_type in ["standard", "linear", "lora"], \
+        "Finetuning type must be one of: standard, linear, lora"
     if args.finetuning_type != "lora":
         args.rank = 0
         args.alpha = 0
@@ -491,7 +490,7 @@ if __name__ == "__main__":
         f"{args.dataset_type}",
         f"randomize_{args.randomize}_lamb_{args.lamb}",
         f"num_images_{args.num_images}_num_augments_{args.num_augments}_beta_{args.beta}",
-        f"orthogonal_finetuned_on_{args.train_datasets}_for_epochs_{args.epochs}_model_vector_{args.model_vector}.json"
+        f"orthogonal_finetuned_on_{args.train_datasets}_for_epochs_{args.epochs}.json"
     )
     args.fig = os.path.join(
         args.fig_root,
@@ -506,7 +505,7 @@ if __name__ == "__main__":
         f"{args.dataset_type}",
         f"randomize_{args.randomize}_lamb_{args.lamb}",
         f"num_images_{args.num_images}_num_augments_{args.num_augments}_beta_{args.beta}",
-        f"orthogonal_finetuned_on_{args.train_datasets}_for_epochs_{args.epochs}_model_vector_{args.model_vector}.jpg"
+        f"orthogonal_finetuned_on_{args.train_datasets}_for_epochs_{args.epochs}.jpg"
     )
 
     torch.multiprocessing.spawn(orthogonal_finetune, args=(args,), nprocs=args.world_size)

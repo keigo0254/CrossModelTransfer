@@ -72,7 +72,7 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
             f"zeroshot_rank_{args.rank}.pt"
         )
         image_encoder.save(args.pretrained_model_path)
-    if args.finetuning_type == "full":
+    if args.finetuning_type == "standard":
         image_encoder.freeze_pretrained_weight_and_unfreeze_Delta()
     else:
         image_encoder.freeze_pretrained_weight()
@@ -323,8 +323,8 @@ if __name__ == "__main__":
         "Batch size must be divisible by gradient accumulation steps"
     args.batch_size = args.batch_size // args.grad_accum_steps
 
-    assert args.finetuning_type in ["full", "linear", "lora"], \
-        "Finetuning type must be one of: full, linear, lora"
+    assert args.finetuning_type in ["standard", "linear", "lora"], \
+        "Finetuning type must be one of: standard, linear, lora"
     if args.finetuning_type != "lora":
         args.rank = 0
         args.alpha = 0

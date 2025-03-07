@@ -168,7 +168,6 @@ if __name__ == "__main__":
         args.finetuning_type,
         f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
         f"rank_{args.rank}_alpha_{args.alpha}",
-        "task_vector",
         f"bs_{args.batch_size}_seed_{args.seed}",
         f"task_vector_for_{args.eval_datasets}.pt"
     ))
