@@ -23,8 +23,8 @@ function orthogonal_finetune()
         --epochs $epochs \
         --num_images $num_images \
         --num_augments $num_augments \
-        --save \
-        --wandb #\
+        --wandb \
+        --save #\
         # --randomize
 }
 

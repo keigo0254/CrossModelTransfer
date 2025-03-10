@@ -93,6 +93,7 @@ def inspect_features(
         ]
         for q_layer in delta_q
     ]
+    average_delta_q_norm = np.mean(delta_q_norm, axis=0)
     delta_q_norm_cls_token = [delta_q_norm[i][0] for i in range(len(delta_q_norm))]
     for i in range(len(delta_q_norm)):
         delta_q_norm[i].pop(0)
@@ -164,6 +165,7 @@ def inspect_features(
         ]
         for k_layer in delta_k
     ]
+    average_delta_k_norm = np.mean(delta_k_norm, axis=0)
     delta_k_norm_cls_token = [delta_k_norm[i][0] for i in range(len(delta_k_norm))]
     for i in range(len(delta_k_norm)):
         delta_k_norm[i].pop(0)
@@ -235,6 +237,7 @@ def inspect_features(
         ]
         for v_layer in delta_v
     ]
+    average_delta_v_norm = np.mean(delta_v_norm, axis=0)
     delta_v_norm_cls_token = [delta_v_norm[i][0] for i in range(len(delta_v_norm))]
     for i in range(len(delta_v_norm)):
         delta_v_norm[i].pop(0)
@@ -311,6 +314,7 @@ def inspect_features(
         ]
         for out_layer in delta_out
     ]
+    average_delta_out_norm = np.mean(delta_out_norm, axis=0)
     delta_out_norm_cls_token = [delta_out_norm[i][0] for i in range(len(delta_out_norm))]
     for i in range(len(delta_out_norm)):
         delta_out_norm[i].pop(0)
@@ -397,6 +401,11 @@ def inspect_features(
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     plt.savefig(filename)
     plt.close()
+
+    print("Average Delta Q Norm: ", average_delta_q_norm)
+    print("Average Delta K Norm: ", average_delta_k_norm)
+    print("Average Delta V Norm: ", average_delta_v_norm)
+    print("Average Delta Out Norm: ", average_delta_out_norm)
 
 
 def inspect_weights(image_encoder: ImageEncoder, args: Args) -> None:

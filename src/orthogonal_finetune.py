@@ -47,7 +47,8 @@ class OrthLoss(nn.Module):
                     orth_loss.append(torch.linalg.matrix_norm(UhU - eye, ord=2))
                 else:
                     raise ValueError(f"Invalid adjust type: {self.adjust_type}")
-        return sum(orth_loss)
+        return sum(orth_loss) / len(orth_loss)
+        # return sum(orth_loss)
 
 
 @torch.no_grad()
@@ -480,11 +481,11 @@ if __name__ == "__main__":
     args.result = os.path.join(
         args.result_root,
         args.model_architecture,
-        args.pretrained,
+        args.pretrained_to_transfer,
         args.finetuning_type,
         f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
         f"rank_{args.rank}_alpha_{args.alpha}",
-        "orthogonal_finetune",
+        f"orthogonal_finetune_on_{args.pretrained}",
         f"bs_{args.batch_size}_seed_{args.seed}",
         f"{args.train_datasets}",
         f"{args.dataset_type}",
@@ -495,11 +496,11 @@ if __name__ == "__main__":
     args.fig = os.path.join(
         args.fig_root,
         args.model_architecture,
-        args.pretrained,
+        args.pretrained_to_transfer,
         args.finetuning_type,
         f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
         f"rank_{args.rank}_alpha_{args.alpha}",
-        "orthogonal_finetune",
+        f"orthogonal_finetune_on_{args.pretrained}",
         f"bs_{args.batch_size}_seed_{args.seed}",
         f"{args.train_datasets}",
         f"{args.dataset_type}",
