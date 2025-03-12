@@ -19,9 +19,9 @@ class MixedDataset(Dataset):
         self,
         dataset_list: List[str],
         root: str,
-        num_images: int,
-        num_augments: int,
-        preprocess: transforms.Compose
+        num_images: int = None,
+        num_augments: int = 1,
+        preprocess: transforms.Compose = None
     ) -> None:
         super().__init__()
         self.dataset_list = dataset_list
@@ -46,8 +46,9 @@ class MixedDataset(Dataset):
 
             # Extract specified number of samples
             for i, batch in enumerate(dataloader):
-                if i >= self.num_images:
-                    break
+                if self.num_images is not None:
+                    if i >= self.num_images:
+                        break
                 batch = maybe_dictionarize(batch)
                 self.dataset.append((batch["images"], batch["labels"].squeeze(0), dataset_name))
 
