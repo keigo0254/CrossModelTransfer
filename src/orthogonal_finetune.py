@@ -294,10 +294,10 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
             })
 
     elif args.dataset_type == "mix":
-        classification_heads = [
-            get_classification_head(args, dataset_name)
+        classification_heads = {
+            dataset_name: get_classification_head(args, dataset_name)
             for dataset_name in args.train_datasets
-        ]
+        }
         multihead_classifier = MultiHeadImageClassifier(
             image_encoder, classification_heads
         )
@@ -328,13 +328,17 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
 
         epoch_train_start_time = time.time()
         ddp_classifier.train()
-        ddp_train_loader.sampler.set_epoch(epoch)
+
+        total_train_time = 0.0
         for epoch in range(args.epochs):
             train_losses = []
             train_ce_losses = []
             train_orth_losses = []
             train_accs = []
+            task_vector_det = []
+            learning_rates = []
             training_batch_times = []
+            ddp_train_loader.sampler.set_epoch(epoch)
             for i, batch in enumerate(ddp_train_loader):
                 batch_start_time = time.time()
                 train_step = i // args.grad_accum_steps + epoch * train_num_batches // args.grad_accum_steps
@@ -344,11 +348,13 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                 dataset_labels = batch["metadata"]
 
                 logits = ddp_classifier(inputs)
-                for i, (label, name) in enumerate(zip(labels, dataset_labels)):
-                    pred = logits[name][i].argmax(dim=0, keepdim=True).to(rank)
+                train_corrects = 0
+                for j, (label, name) in enumerate(zip(labels, dataset_labels)):
+                    pred = logits[name][j].argmax(dim=0, keepdim=True).to(rank)
                     train_corrects += pred.eq(label.view_as(pred)).sum().item()
 
-                train_ce_loss = ce_loss_fn(logits, labels)
+                    train_ce_loss = ce_loss_fn(logits[name][j], labels[j])
+
                 train_orth_loss = orth_loss_fn(ddp_classifier.module.image_encoder)
 
                 train_loss = train_ce_loss + args.beta * train_orth_loss
@@ -356,10 +362,14 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
 
                 train_acc = train_corrects / len(labels)
 
+                det = calculate_det(ddp_classifier.module.image_encoder)
+
                 train_losses.append(train_loss.item())
                 train_ce_losses.append(train_ce_loss.item())
                 train_orth_losses.append(train_orth_loss.item())
                 train_accs.append(train_acc)
+                task_vector_det.append(det.item())
+                learning_rates.append(optimizer.param_groups[0]["lr"])
 
                 if (i + 1) % args.grad_accum_steps == 0:
                     scheduler(train_step)
@@ -371,7 +381,7 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                     training_batch_times.append(training_batch_time)
                     percent_complete = 100 * i / len(ddp_train_loader)
                     print(
-                        f"Training on {args.train_dataset}\t Epoch: {epoch + 1}/{args.epochs}\t"
+                        f"Training on Mixed dataset\t Epoch: {epoch + 1}/{args.epochs}\t"
                         f"Batch: {i + 1}/{len(ddp_train_loader)} "
                         f"({percent_complete:.2f}%)\t"
                         f"Step: {train_step + 1}/{args.epochs * train_num_batches // args.grad_accum_steps}\t"
@@ -381,6 +391,18 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
                         f"Training Accuracy: {train_acc:.2%}\t"
                         f"Training Batch Time: {training_batch_time:.2f}s", flush=True
                     )
+
+                    if args.wandb:
+                        run.log({
+                            "Epoch": epoch + 1,
+                            "Training Loss": np.mean(train_losses),
+                            "Training CE Loss": np.mean(train_ce_losses),
+                            "Training Orth Loss": np.mean(train_orth_losses),
+                            "Training Accuracy": np.mean(train_accs),
+                            "Task Vector Det": np.mean(task_vector_det),
+                            "Learning Rate": np.mean(learning_rates),
+                            "Training Batch Time": np.mean(training_batch_times),
+                        })
 
                 # if args.save:
                 #     if train_step % 200 == 0:
@@ -405,6 +427,12 @@ def orthogonal_finetune(rank: int, args: Args) -> ImageEncoder:
 
         total_train_time += time.time() - epoch_train_start_time
         print(f"\nEpoch: {epoch + 1} Training Time: {total_train_time:.2f}s\n")
+
+        print(f"Completed Training in {total_train_time:.2f}s")
+        if args.wandb:
+            run.log({
+                "Total Training Time": total_train_time,
+            })
 
     # Save the finetuned model
     if args.save:

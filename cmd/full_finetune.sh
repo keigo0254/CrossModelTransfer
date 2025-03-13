@@ -1,0 +1,72 @@
+#!bin/bash
+# usage: nohup bash cmd/full_finetune.sh > log/full_finetune.log &
+function full_finetune()
+{
+    python src/full_finetune.py \
+        --train_datasets $train_datasets \
+        --eval_datasets $eval_datasets \
+        --model_architecture $model_architecture \
+        --pretrained $pretrained \
+        --pretrained_to_transfer $pretrained_to_transfer \
+        --finetuning_type $finetuning_type \
+        --adjust_type $adjust_type \
+        --dataset_type $dataset_type \
+        --lr $lr \
+        --wd $wd \
+        --rank $rank \
+        --alpha $alpha \
+        --batch_size $batch_size \
+        --grad_accum_steps $grad_accum_steps \
+        --seed $seed \
+        --lamb $lamb \
+        --beta $beta \
+        --epochs $epochs \
+        --num_images $num_images \
+        --num_augments $num_augments \
+        --wandb \
+        --save
+}
+
+train_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
+eval_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
+model_architecture=ViT-B-32
+pretrained=laion400m_e32
+pretrained_to_transfer=openai
+finetuning_type=linear # standard, linear, lora
+adjust_type=fro
+dataset_type=cycle
+lr=1e-05
+wd=0.1
+rank=16
+alpha=32
+batch_size=128
+grad_accum_steps=1 # 1 for ViT-B-32, 2 for ViT-B-16 8 for ViT-L-14
+lamb=1.0
+beta=1.0
+epochs=100
+num_images=100
+num_augments=10
+seed=2025
+full_finetune $train_datasets $eval_datasets $model_architecture $pretrained $pretrained_to_transfer $finetuning_type $lr $wd $rank $alpha $beta $batch_size $grad_accum_steps $seed $lamb $adjust_type $dataset_type $epochs $num_images $num_augments
+
+train_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
+eval_datasets="Cars","DTD","EuroSAT","GTSRB","MNIST","RESISC45","SUN397","SVHN"
+model_architecture=ViT-B-32
+pretrained=laion400m_e32
+pretrained_to_transfer=openai
+finetuning_type=linear # standard, linear, lora
+adjust_type=fro
+dataset_type=cycle
+lr=1e-05
+wd=0.1
+rank=16
+alpha=32
+batch_size=128
+grad_accum_steps=1 # 1 for ViT-B-32, 2 for ViT-B-16 8 for ViT-L-14
+lamb=1.0
+beta=1.0
+epochs=1
+num_images=0
+num_augments=1
+seed=2025
+full_finetune $train_datasets $eval_datasets $model_architecture $pretrained $pretrained_to_transfer $finetuning_type $lr $wd $rank $alpha $beta $batch_size $grad_accum_steps $seed $lamb $adjust_type $dataset_type $epochs $num_images $num_augments

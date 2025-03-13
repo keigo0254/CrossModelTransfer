@@ -17,7 +17,7 @@ from datasets.registry import get_dataset
 from distributed import cleanup_ddp, distribute_loader, setup_ddp
 from eval import evaluate
 from heads import get_classification_head
-from modeling import ImageClassifier, ImageEncoder, MultiHeadImageClassifier
+from modeling import ImageClassifier, ImageEncoder
 from task_vectors import TaskVector
 from utils import cosine_lr, LabelSmoothing
 
@@ -56,6 +56,20 @@ def full_finetune(rank: int, args: Args) -> ImageEncoder:
     else:
         image_encoder.freeze_pretrained_weight()
 
+    # print(f"Loading a {args.pretrained_to_transfer} task vector")
+    # task_vector = TaskVector.load_vector(os.path.join(
+    #         args.model_root,
+    #         args.model_architecture,
+    #         args.pretrained_to_transfer,
+    #         args.finetuning_type,
+    #         f"lr_{args.lr}_wd_{args.wd}_ls_{args.ls}",
+    #         f"rank_{args.rank}_alpha_{args.alpha}",
+    #         f"bs_{args.batch_size}_seed_{args.seed}",
+    #         f"task_vector_for_{args.train_datasets}.pt"
+    # ))
+
+    # image_encoder: ImageEncoder = task_vector.apply_to(image_encoder, args.lamb)
+
     if args.wandb:
         print("Logging model to wandb")
         wandb.watch(image_encoder, log="all", log_freq=250)
@@ -73,14 +87,15 @@ def full_finetune(rank: int, args: Args) -> ImageEncoder:
     )
 
     preprocess_fn = image_encoder.train_preprocess
-    preprocess_fn = get_augmented_preprocess_fn(preprocess_fn, 0.8)
+    if args.num_augments > 1:
+        preprocess_fn = get_augmented_preprocess_fn(preprocess_fn, 0.8)
 
     if args.ls > 0.0:
         loss_fn = LabelSmoothing(args.ls)
     else:
         loss_fn = nn.CrossEntropyLoss()
 
-    if args.dataset_type == "cycle":
+    if args.num_images > 0:
         dataset_dict = {
             dataset_name: get_dataset(
                 dataset_name+"Val", preprocess_fn, args.dataset_root,
@@ -194,89 +209,104 @@ def full_finetune(rank: int, args: Args) -> ImageEncoder:
                 "Total Training Time": total_train_time,
             })
 
-    elif args.dataset_type == "mix":
-        classification_heads = [
-            get_classification_head(args, dataset_name)
-            for dataset_name in args.train_datasets
-        ]
-        multihead_classifier = MultiHeadImageClassifier(
-            image_encoder, classification_heads
-        )
-        multihead_classifier.freeze_head()
-        multihead_classifier = multihead_classifier.to(rank)
-
-        train_dataset = MixedDataset(
-            args.train_datasets, args.dataset_root,
-            args.num_images, args.num_augments, preprocess_fn
-        )
-        train_dataloader = torch.utils.data.DataLoader(
-            train_dataset, batch_size=args.batch_size, shuffle=True,
-            num_workers=args.num_workers, pin_memory=True
-        )
-
-        train_num_batches = len(train_dataloader)
-
-        scheduler = cosine_lr(
-            optimizer, args.lr, args.warmup_length,
-            args.epochs * train_num_batches // args.grad_accum_steps
-        )
-
-        ddp_train_loader = distribute_loader(train_dataloader)
-        ddp_classifier = torch.nn.parallel.DistributedDataParallel(
-            multihead_classifier, device_ids=[rank],
-            find_unused_parameters=False, output_device=rank
-        )
-
-        epoch_train_start_time = time.time()
-        ddp_classifier.train()
-        ddp_train_loader.sampler.set_epoch(epoch)
+    else:
+        total_train_time = 0.0
         for epoch in range(args.epochs):
             train_losses = []
             train_accs = []
             training_batch_times = []
-            for i, batch in enumerate(ddp_train_loader):
-                batch_start_time = time.time()
-                train_step = i // args.grad_accum_steps + epoch * train_num_batches // args.grad_accum_steps
-                batch = maybe_dictionarize(batch)
-                inputs = batch["images"].to(rank)
-                labels = batch["labels"].to(rank)
-                dataset_labels = batch["metadata"]
+            learning_rates = []
+            for dataset_name in args.train_datasets:
+                args.train_dataset = dataset_name
+                classification_head = get_classification_head(args, dataset_name)
+                classifier = ImageClassifier(image_encoder, classification_head)
+                classifier.freeze_head()
+                classifier = classifier.to(rank)
+                train_dataset = get_dataset(
+                    dataset_name, preprocess_fn, args.dataset_root,
+                    args.batch_size, args.num_workers
+                )
+                train_dataloader = get_dataloader(
+                    train_dataset,
+                    is_train=True,
+                    args=args,
+                    image_encoder=None
+                )
 
-                logits = ddp_classifier(inputs)
-                for i, (label, name) in enumerate(zip(labels, dataset_labels)):
-                    pred = logits[name][i].argmax(dim=0, keepdim=True).to(rank)
-                    train_corrects += pred.eq(label.view_as(pred)).sum().item()
+                train_num_batches = len(train_dataloader)
 
-                train_loss = loss_fn(logits, labels)
+                scheduler = cosine_lr(
+                    optimizer, args.lr, args.warmup_length,
+                    args.epochs * train_num_batches // args.grad_accum_steps
+                )
 
-                train_loss.backward()
+                ddp_train_loader = distribute_loader(train_dataloader)
+                ddp_classifier = torch.nn.parallel.DistributedDataParallel(
+                    classifier, device_ids=[rank],
+                    find_unused_parameters=False, output_device=rank
+                )
 
-                train_acc = train_corrects / len(labels)
+                epoch_train_start_time = time.time()
+                ddp_classifier.train()
+                ddp_train_loader.sampler.set_epoch(epoch)
+                for i, batch in enumerate(ddp_train_loader):
+                    batch_start_time = time.time()
+                    train_step = i // args.grad_accum_steps + epoch * train_num_batches // args.grad_accum_steps
+                    batch = maybe_dictionarize(batch)
+                    inputs = batch["images"].to(rank)
+                    labels = batch["labels"].to(rank).flatten()
 
-                train_losses.append(train_loss.item())
-                train_accs.append(train_acc)
+                    logits = ddp_classifier(inputs)
+                    predictions = torch.argmax(logits, dim=1)
 
-                if (i + 1) % args.grad_accum_steps == 0:
-                    scheduler(train_step)
-                    nn.utils.clip_grad_norm_(params, max_norm=1.0)
-                    optimizer.step()
-                    optimizer.zero_grad()
+                    train_loss = loss_fn(logits, labels)
 
-                    training_batch_time = time.time() - batch_start_time
-                    training_batch_times.append(training_batch_time)
-                    percent_complete = 100 * i / len(ddp_train_loader)
-                    print(
-                        f"Training on {args.train_dataset}\t Epoch: {epoch + 1}/{args.epochs}\t"
-                        f"Batch: {i + 1}/{len(ddp_train_loader)} "
-                        f"({percent_complete:.2f}%)\t"
-                        f"Step: {train_step + 1}/{args.epochs * train_num_batches // args.grad_accum_steps}\t"
-                        f"Training Loss: {train_loss.item():.4f}\t"
-                        f"Training Accuracy: {train_acc:.2%}\t"
-                        f"Training Batch Time: {training_batch_time:.2f}s", flush=True
-                    )
+                    train_loss.backward()
 
-        total_train_time += time.time() - epoch_train_start_time
-        print(f"\nEpoch: {epoch + 1} Training Time: {total_train_time:.2f}s\n")
+                    train_corrects = (predictions == labels).sum().item()
+                    train_acc = train_corrects / len(labels)
+
+                    train_losses.append(train_loss.item())
+                    train_accs.append(train_acc)
+                    learning_rates.append(optimizer.param_groups[0]["lr"])
+
+                    if (i + 1) % args.grad_accum_steps == 0:
+                        scheduler(train_step)
+                        nn.utils.clip_grad_norm_(params, max_norm=1.0)
+                        optimizer.step()
+                        optimizer.zero_grad()
+
+                        training_batch_time = time.time() - batch_start_time
+                        training_batch_times.append(training_batch_time)
+                        percent_complete = 100 * i / len(ddp_train_loader)
+                        print(
+                            f"Training on {args.train_dataset}\t Epoch: {epoch + 1}/{args.epochs}\t"
+                            f"Batch: {i + 1}/{len(ddp_train_loader)} "
+                            f"({percent_complete:.2f}%)\t"
+                            f"Step: {train_step + 1}/{args.epochs * train_num_batches // args.grad_accum_steps}\t"
+                            f"Training Loss: {train_loss.item():.4f}\t"
+                            f"Training Accuracy: {train_acc:.2%}\t"
+                            f"lr: {optimizer.param_groups[0]['lr']:.8f}\t"
+                            f"Training Batch Time: {training_batch_time:.2f}s", flush=True
+                        )
+
+                total_train_time += time.time() - epoch_train_start_time
+                print(f"\nEpoch: {epoch + 1} Training Time: {total_train_time:.2f}s\n")
+
+                if args.wandb:
+                    run.log({
+                        "Epoch": epoch + 1,
+                        "Training Loss": np.mean(train_losses),
+                        "Training Accuracy": np.mean(train_accs),
+                        "Learning Rate": np.mean(learning_rates),
+                        "Training Batch Time": np.mean(training_batch_times),
+                    })
+
+        print(f"Completed Training in {total_train_time:.2f}s")
+        if args.wandb:
+            run.log({
+                "Total Training Time": total_train_time,
+            })
 
     # Save the finetuned model
     if args.save:

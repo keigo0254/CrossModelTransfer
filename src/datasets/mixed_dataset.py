@@ -33,7 +33,7 @@ class MixedDataset(Dataset):
 
         print(f"Creating mixed dataset with {num_images} images from each dataset")
         for dataset_name in dataset_list:
-            print(f"Loading {num_images} images from {dataset_name}")
+            print(f"Loading {num_images if num_images > 0 else 'all'} images from {dataset_name}")
             # Load each dataset
             dataset = get_dataset(
                 dataset_name,
@@ -46,9 +46,10 @@ class MixedDataset(Dataset):
 
             # Extract specified number of samples
             for i, batch in enumerate(dataloader):
-                if self.num_images is not None:
+                if self.num_images > 1:
                     if i >= self.num_images:
                         break
+                print(f"Loading image {i + 1} from {dataset_name}")
                 batch = maybe_dictionarize(batch)
                 self.dataset.append((batch["images"], batch["labels"].squeeze(0), dataset_name))
 
