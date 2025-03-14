@@ -93,6 +93,8 @@ if __name__ == "__main__":
         args.rank = 0
         args.alpha = 0
 
+    args.batch_size = args.batch_size // args.grad_accum_steps
+
     SEED = args.seed
     random.seed(SEED)
     os.environ['PYTHONHASHSEED'] = str(SEED)
