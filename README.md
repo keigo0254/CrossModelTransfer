@@ -1,4 +1,4 @@
-# Cross-Model Transfer of Task Vectors via Few-Shot Orthogonal Alignment [arXiv'25]()
+# Cross-Model Transfer of Task Vectors via Few-Shot Orthogonal Alignment [arXiv'25](https://arxiv.org/abs/2505.12021)
 
 <i>Kazuhiko Kawamoto</i>, <i>Atsuhiro Endo</i>, <i>Hiroshi Kera</i>
 
