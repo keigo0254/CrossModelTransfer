@@ -11,3 +11,5 @@ dataset/
 *.tar.gz
 *.zip
 *.jpg
+__pycache__/
+*.pyc
