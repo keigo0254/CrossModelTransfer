@@ -27,14 +27,14 @@ def process_dataset(
 
     for i, line in enumerate(lines):
         input_path = line.strip()
-        final_folder_name = "_".join(x for x in input_path.split('/')[:-1])[1:]
+        final_folder_name = "_".join(x for x in input_path.split('/')[:-1])
         filename = input_path.split('/')[-1]
         output_class_folder = os.path.join(output_folder, final_folder_name)
 
         if not os.path.exists(output_class_folder):
             os.makedirs(output_class_folder)
 
-        full_input_path = os.path.join(downloaded_data_path, input_path[1:])
+        full_input_path = os.path.join(downloaded_data_path, input_path)
         output_file_path = os.path.join(output_class_folder, filename)
 
         shutil.copy(full_input_path, output_file_path)
@@ -153,7 +153,6 @@ process_dataset(
     downloaded_data_path,
     os.path.join(output_path, "val")
 )
-
 
 # Process ImageNet dataset
 # Original Code:
