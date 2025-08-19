@@ -7,3 +7,7 @@ fig
 log
 result
 wandb
+dataset/
+*.tar.gz
+*.zip
+*.jpg
