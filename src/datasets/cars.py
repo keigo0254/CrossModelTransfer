@@ -155,7 +155,7 @@ class Cars:
             location,
             "test",
             preprocess,
-            download=True
+            download=False
         )
         self.test_loader = torch.utils.data.DataLoader(
             self.test_dataset,

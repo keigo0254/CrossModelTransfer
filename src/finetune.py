@@ -93,7 +93,7 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
 
     # Load Dataset and DataLoader
     train_dataset = get_dataset(
-        args.train_dataset+"Val", preprocess_fn, args.dataset_root,
+        args.train_dataset, preprocess_fn, args.dataset_root,
         args.batch_size, args.num_workers
     )
     val_dataset = get_dataset(

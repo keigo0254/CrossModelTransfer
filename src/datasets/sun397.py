@@ -40,6 +40,6 @@ class SUN397:
 
         idx_to_class = {v: k for k, v in self.train_dataset.class_to_idx.items()}
         self.classnames: List[str] = [
-            idx_to_class[i][2:].replace("_", " ")
+            idx_to_class[i][8:].replace("_", " ")
             for i in range(len(idx_to_class))
         ]

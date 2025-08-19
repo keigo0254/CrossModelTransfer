@@ -66,11 +66,16 @@ def torch_save(model, save_path):
     torch.save(model.cpu(), save_path)
 
 
-def torch_load(save_path, device=None):
-    model = torch.load(save_path)
-    if device is not None:
-        model = model.to(device)
-    return model
+def torch_load(save_path):
+    import torch
+    version = tuple(map(int, torch.__version__.split(".")[:2]))
+    if version >= (2, 6):
+        import torch.serialization
+        from modeling import ClassificationHead, ImageEncoder
+        torch.serialization.add_safe_globals([ClassificationHead, ImageEncoder])
+        return torch.load(save_path, weights_only=False)
+    else:
+        return torch.load(save_path)
 
 
 def get_logits(inputs: torch.Tensor, classifier) -> torch.Tensor:
