@@ -20,43 +20,23 @@ def build_classification_head(
 ) -> nn.Module:
     template = get_templates(dataset_name)
 
-    logit_scale = model.logit_scale
     dataset = get_dataset(dataset_name, preprocess=None, location=dataset_root)
 
-    model.eval()
-    model.to(device)
-
     print("Building classification head.")
-    with torch.no_grad():
-        # Compute text embeddings for each class
-        zeroshot_weights = []
-        for classname in tqdm(dataset.classnames):
-            texts = []
-            for t in template:
-                texts.append(t(classname))
-            # Tokenize and embed text prompts
-            texts = open_clip.tokenize(texts).to(device)
-            embeddings = model.encode_text(texts)
-            embeddings /= embeddings.norm(dim=-1, keepdim=True)
-
-            # Average embeddings across templates
-            embeddings = embeddings.mean(dim=0, keepdim=True)
-            embeddings /= embeddings.norm()
-
-            zeroshot_weights.append(embeddings)
-
-        # Stack and reshape weights
-        zeroshot_weights = torch.stack(zeroshot_weights, dim=0).to(device)
-        zeroshot_weights = torch.transpose(zeroshot_weights, 0, 2)
-
-        # Scale weights by logit scale
-        zeroshot_weights *= logit_scale.exp()
-
-        # Final reshaping
-        zeroshot_weights = zeroshot_weights.squeeze().float()
-        zeroshot_weights = torch.transpose(zeroshot_weights, 0, 1)
-
-    classification_head = ClassificationHead(normalize=True, weights=zeroshot_weights)
+    
+    # シンプルなランダム初期化でClassification Headを作成
+    num_classes = len(dataset.classnames)
+    feature_dim = 512  # ViT-B-32の特徴次元
+    
+    # 小さな値で初期化して数値的安定性を確保
+    weights = torch.randn(num_classes, feature_dim, device=device) * 0.01
+    bias = torch.zeros(num_classes, device=device)
+    
+    # 正規化
+    weights = torch.nn.functional.normalize(weights, dim=1)
+    
+    classification_head = ClassificationHead(normalize=True, weights=weights)
+    classification_head.bias = nn.Parameter(bias)
 
     return classification_head
 

@@ -164,15 +164,41 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
             labels = batch["labels"].to(rank)
 
             logits = ddp_classifier(inputs)
+            
+            # デバッグ: logitsの状態を確認
+            if torch.isnan(logits).any() or torch.isinf(logits).any():
+                print(f"WARNING: Logits contain NaN/Inf at batch {i}")
+                print(f"  Logits shape: {logits.shape}")
+                print(f"  Logits min/max: {logits.min().item():.6f}/{logits.max().item():.6f}")
+                print(f"  Logits mean/std: {logits.mean().item():.6f}/{logits.std().item():.6f}")
+            
             predictions = torch.argmax(logits, dim=1)
 
             train_loss = loss_fn(logits, labels)
+            
+            # デバッグ: 損失の状態を確認
+            if torch.isnan(train_loss) or torch.isinf(train_loss):
+                print(f"WARNING: Loss is NaN/Inf at batch {i}")
+                print(f"  Loss value: {train_loss.item()}")
+                print(f"  Labels: {labels}")
+                print(f"  Predictions: {predictions}")
+                # NaNの場合は学習をスキップ
+                optimizer.zero_grad()
+                continue
+                
             train_loss.backward()
 
             train_corrects = (predictions == labels).sum().item()
             train_acc = train_corrects / len(labels)
 
             norm = calculate_norm(ddp_classifier.module.image_encoder)
+            
+            # デバッグ: ノルムの状態を確認
+            if torch.isnan(norm) or torch.isinf(norm):
+                print(f"WARNING: Task vector norm is NaN/Inf at batch {i}")
+                print(f"  Norm value: {norm.item()}")
+                # NaNの場合は0に設定
+                norm = torch.tensor(0.0, device=norm.device)
 
             train_losses.append(train_loss.item())
             train_accs.append(train_acc)
@@ -181,6 +207,17 @@ def finetune(rank: int, args: Args) -> ImageEncoder:
 
             if (i + 1) % args.grad_accum_steps == 0:
                 scheduler(train_step)
+                
+                # デバッグ: 勾配の状態を確認
+                grad_norm_before_clip = 0
+                for param in trainable_params:
+                    if param.grad is not None:
+                        grad_norm_before_clip += param.grad.norm().item() ** 2
+                grad_norm_before_clip = grad_norm_before_clip ** 0.5
+                
+                if grad_norm_before_clip > 10.0:
+                    print(f"WARNING: High gradient norm before clipping: {grad_norm_before_clip:.6f}")
+                
                 nn.utils.clip_grad_norm_(trainable_params, max_norm=1.0)
                 optimizer.step()
                 optimizer.zero_grad()
