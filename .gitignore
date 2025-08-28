@@ -13,3 +13,4 @@ dataset/
 *.jpg
 __pycache__/
 *.pyc
+*.pt
